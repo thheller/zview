@@ -1,5 +1,9 @@
 %%%-------------------------------------------------------------------
-%%% File:      erlydtl_scanner.erl
+%%% File:      zview_scanner.erl
+%%% @author    Thomas Heller <thheller@gmail.com>
+%%%
+%%% This file is a slightly modified Version of the Original at:
+%%% Original:  https://github.com/evanmiller/erlydtl/blob/master/src/erlydtl_scanner.erl
 %%% @author    Roberto Saccon <rsaccon@gmail.com> [http://rsaccon.com]
 %%% @author    Evan Miller <emmiller@gmail.com>
 %%% @copyright 2008 Roberto Saccon, Evan Miller
@@ -30,10 +34,15 @@
 %%% THE SOFTWARE.
 %%%
 %%% @since 2007-11-11 by Roberto Saccon, Evan Miller
+%%% @since 2011-09-25 modified by Thomas Heller
+%%% Modifications:
+%%% - Allow \t,\n in Expressions
+%%% - Change Keywords: removed some, added: do, end, export
 %%%-------------------------------------------------------------------
--module(erlydtl_scanner).
+-module(zview_scanner).
 -author('rsaccon@gmail.com').
 -author('emmiller@gmail.com').
+-author('thheller@gmail.com').
 
 -export([scan/1]). 
 
@@ -210,11 +219,17 @@ scan("=" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
 scan(":" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
     scan(T, [{':', {Row, Column}} | Scanned], {Row, Column + 1}, {in_code, Closer});
 
-% scan("." ++ T, Scanned, {Row, Column}, {_, Closer}) ->
-%    scan(T, [{'.', {Row, Column}} | Scanned], {Row, Column + 1}, {in_code, Closer});
+scan("." ++ T, Scanned, {Row, Column}, {_, Closer}) ->
+   scan(T, [{'.', {Row, Column}} | Scanned], {Row, Column + 1}, {in_code, Closer});
 
 scan("_(" ++ T, Scanned, {Row, Column}, {in_code, Closer}) ->
     scan(T, lists:reverse([{'_', {Row, Column}}, {'(', {Row, Column + 1}}], Scanned), {Row, Column + 2}, {in_code, Closer});
+
+scan("\n" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
+    scan(T, Scanned, {Row, Column + 1}, {in_code, Closer});
+
+scan("\t" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
+    scan(T, Scanned, {Row, Column + 1}, {in_code, Closer});
 
 scan(" " ++ T, Scanned, {Row, Column}, {_, Closer}) ->
     scan(T, Scanned, {Row, Column + 1}, {in_code, Closer});
@@ -262,10 +277,6 @@ char_type(C) when ((C >= $a) andalso (C =< $z)) orelse ((C >= $A) andalso (C =< 
     letter_underscore;
 char_type(C) when ((C >= $0) andalso (C =< $9)) ->
     digit;
-char_type($.) ->
-    dot;
-char_type($@) ->
-    at;
 char_type(_C) ->
     undefined.
 
@@ -274,7 +285,7 @@ char_type(_C) ->
 -include_lib("eunit/include/eunit.hrl").
 
 var_ident_test() ->
-  Result = scan("{% block world %}"),
+  Result = scan("{{ hello.world | bla: a, 'x' }}"),
   ?debugVal(Result).
 
 -endif.

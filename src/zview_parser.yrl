@@ -156,7 +156,7 @@ Tag -> open_tag export_keyword Args close_tag: {export_tag, '$2', '$3'}.
 Tag -> open_tag identifier Args close_tag : {tag, '$2', '$3'}.
 
 Block -> BlockBraced Elements EndBlockBraced: {block, '$1', '$2'}.
-BlockBraced -> open_tag export_keyword Args do_keyword close_tag : {export_block, '$2', '$3'}.
+BlockBraced -> open_tag export_keyword Args do_keyword close_tag : {export_block, '$3'}.
 BlockBraced -> open_tag identifier Args do_keyword close_tag : {block_tag, '$2', '$3'}.
 EndBlockBraced -> open_tag end_keyword close_tag.
 
@@ -174,7 +174,7 @@ Filters -> Filters '|' Filter : '$1' ++ ['$3'].
 ForBlock -> ForBraced Elements EndForBraced : {for, '$1', '$2'}.
 ForBlock -> ForBraced Elements EmptyBraced Elements EndForBraced : {for, '$1', '$2', '$4'}.
 EmptyBraced -> open_tag empty_keyword close_tag.
-ForBraced -> open_tag for_keyword ForExpression close_tag : '$3'.
+ForBraced -> open_tag for_keyword ForExpression close_tag : {'$2', '$3'}.
 EndForBraced -> open_tag endfor_keyword close_tag.
 ForExpression -> ForGroup in_keyword Variable : {'in', '$1', '$3'}.
 ForGroup -> identifier : ['$1'].
