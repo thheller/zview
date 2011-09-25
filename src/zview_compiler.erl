@@ -77,7 +77,8 @@ to_ast(ParseTree, TargetModule) ->
   ModuleAst = ?C:attribute(?C:atom(module), [?C:atom(TargetModule)]),
   ExportAst = ?C:attribute(?C:atom(export), [
       ?C:list([
-          ?C:arity_qualifier(?C:atom(render), ?C:integer(1))
+          ?C:arity_qualifier(?C:atom(render), ?C:integer(1)),
+          ?C:arity_qualifier(?C:atom(render), ?C:integer(2))
         ])
     ]),
 
@@ -101,6 +102,15 @@ to_ast(ParseTree, TargetModule) ->
     ?C:atom(render),
     [
       ?C:clause([ ?C:variable("Input") ], none, [
+          ?MFA(none, render, [ ?C:variable("Input"), ?C:atom(undefined) ])
+        ])
+    ]
+  ),
+
+  Render2FunAst = ?C:function(
+    ?C:atom(render),
+    [
+      ?C:clause([ ?C:variable("Input"), ?C:variable("Context") ], none, [
           ?C:match_expr(
             ?C:tuple([
                 ?C:atom(ok),
@@ -110,7 +120,8 @@ to_ast(ParseTree, TargetModule) ->
               zview_runtime,
               make_var_stack,
               [
-                ?C:variable("Input")
+                ?C:variable("Input"),
+                ?C:variable("Context")
               ]
             )
           ),
@@ -141,7 +152,8 @@ to_ast(ParseTree, TargetModule) ->
     ModuleAst,
     ExportAst,
     FunsAst,
-    RenderFunAst
+    RenderFunAst,
+    Render2FunAst
   ]),
 
   {ast, TargetModule, Sources}.
@@ -198,7 +210,7 @@ transform_node({for, {Id, {in, ForVariables, ForList}}, ForBody}, State) ->
 
   {FunName, NewState} = define_block_function(Id, ForBody, StateList),
 
-  % apply: zview_runtime:call_block_tag({for, [x], 'some.list'}, fun tpl_for_0/2, VarStack)
+  % zview_runtime:call_block_tag({for, [x], 'some.list'}, fun tpl_for_0/2, VarStack)
   Code = ?MFA(
     zview_runtime,
     call_block_tag, 

@@ -12,24 +12,24 @@ resolve(Key, VarStack) ->
   ?debugVal({resolve, Key, Value, VarStack}),
   Value.
 
-resolve_it(Key, []) -> [];
+resolve_it(Key, root) -> [];
 
-resolve_it([<<"_parent">> | Key], [{stack, _} | VarStack]) ->
-  resolve_it(Key, VarStack);
+resolve_it([<<"_parent">> | Key], {var_stack, _Context, _Vars, Parent}) ->
+  resolve_it(Key, Parent);
 
-resolve_it(Key, [{stack, Vars} | VarStack]) ->
+resolve_it(Key, {var_stack, _Context, Vars, Parent}) ->
   case kvc:path(Key, Vars) of
     [] ->
-      resolve(Key, VarStack);
+      resolve(Key, Parent);
     Value ->
       Value
   end.
 
-make_var_stack([{stack, [List]} | _] = Input) when is_list(List) ->
+make_var_stack({var_stack, _Context, Vars, _Parent} = Input, undefined) when is_list(Vars) ->
   {ok, Input};
 
-make_var_stack(Input) when is_list(Input) ->
-  {ok, [{stack, Input}]}.
+make_var_stack(Input, Context) when is_list(Input) ->
+  {ok, {var_stack, Context, Input, root}}.
 
 call_tag(TagName, TagArgs, VarStack) ->
   ?debugVal({tag, TagName, TagArgs, VarStack}),
@@ -49,7 +49,7 @@ iterate_block(VarNames, [], Block, VarStack, Results) ->
   lists:reverse(Results);
 
 iterate_block(VarNames, [Item | Rest], Block, VarStack, Results) ->
-  BlockStack = [ {stack, make_stack_vars(VarNames, Item)} | VarStack ],
+  BlockStack = {var_stack, none, make_stack_vars(VarNames, Item), VarStack},
   Result = Block(BlockStack),
   iterate_block(VarNames, Rest, Block, VarStack, [Result | Results]).
 
@@ -83,7 +83,7 @@ for_loop_test() ->
       resolve(x, VarStack)
   end,
 
-  Result = call_block_tag({for, [x], [a,b,c]}, BlockFun, [{stack, []}]),
+  Result = call_block_tag({for, [x], [a,b,c]}, BlockFun, {var_stack, [], []}),
 
   ?assertEqual([a,b,c], Result).
 
