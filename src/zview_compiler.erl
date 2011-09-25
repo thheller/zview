@@ -336,10 +336,6 @@ transform_node({string_literal, _, String}, State) ->
 transform_node(Unparsed, _State) ->
   throw({unparsed, Unparsed}).
 
-transform_to_binary(Atom) ->
-  Bin = list_to_binary(atom_to_list(Atom)),
-  ?C:abstract(Bin).
-
 transform_arg({{identifier, _, _} = Id, Var}) ->
   {ok, ValAst, _} = transform_node(Var, no_state),
   ?C:tuple([
@@ -420,7 +416,7 @@ unescape_string_literal([C | Rest], Acc, slash) ->
 
 compile_test_test() ->
   DummyTpl = 
-    "{% if y == \"test\" and wtf %}true{{ true }}{% else %}false{% endif %}"
+    "{% if y == \"test\" and x %}true{{ true }}{% else %}false{% endif %}"
     "hello world"
     "{{ x | default: 'a', 'b', 'c' }}"
     "{% for x in some.list %}{{ x }} {{ _parent.x }} {% endfor %}"
