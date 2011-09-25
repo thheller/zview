@@ -17,3 +17,9 @@ end
 watch('^templates/(.*).dtl') do |m|
   system('rebar compile skip_deps=true')
 end
+
+watch('^examples/(.*).(tpl|input)') do |m|
+  cmd = %{ ./scripts/run_example examples #{ m[1] } }
+  puts "Running: #{ cmd }"
+  system(cmd)
+end

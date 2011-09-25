@@ -52,6 +52,9 @@ to_module({ast, TargetModule, _Sources} = Ast) ->
 
   {ok, TargetModule}.
 
+compile(Bin, TargetModule) when is_binary(Bin) ->
+  compile(binary_to_list(Bin), TargetModule);
+
 compile(Bin, TargetModule) ->
   {ok, Scan} = zview_scanner:scan(Bin),
   {ok, ParseTree} = zview_parser:parse(Scan),

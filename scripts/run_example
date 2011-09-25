@@ -1,0 +1,45 @@
+#!/usr/bin/env escript
+%% -*- erlang -*-
+%%! -pa ebin deps/kvc/ebin -smp enable -sname run_example 
+
+-include_lib("eunit/include/eunit.hrl").
+
+main([SampleFolder, SampleName]) ->
+  % code:add_path(lists:flatten([SampleFolder, "/../ebin"]),
+  TemplateName = lists:flatten([SampleFolder, "/", SampleName, ".tpl"]),
+  InputName = lists:flatten([SampleFolder, "/", SampleName, ".input"]),
+
+  case file:read_file(TemplateName) of
+    {ok, Source} ->
+      {ok, Vars} = file:consult(InputName),
+
+      ok = run_example(SampleName, Source, Vars),
+      ok;
+      
+    Other ->
+      io:format("Failed to read: ~p, ~p~n", [TemplateName, Other]),
+      halt(1)
+  end;
+
+main(_) ->
+  usage().
+
+usage() ->
+  io:format("usage: run_example Folder Name\n"),
+  halt(1).
+
+
+run_example(_Name, Source, Vars) ->
+  {ok, run_example_mod} = zview_compiler:compile(Source, run_example_mod),
+  {ok, Output, Exports} = run_example_mod:render(Vars),
+
+  lists:map(
+    fun({Key, Value}) ->
+        io:format("========= Export: ~p~n~s~n", [Key, Value])
+    end,
+    Exports
+  ),
+
+  io:format("========= Output:~n~s~n", [Output]),
+
+  ok.

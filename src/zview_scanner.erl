@@ -1,11 +1,11 @@
 %%%-------------------------------------------------------------------
-%%% File:      zview_scanner.erl
-%%% @author    Thomas Heller <thheller@gmail.com>
-%%%
 %%% This file is a slightly modified Version of the Original at:
+%%% File:      zview_scanner.erl
 %%% Original:  https://github.com/evanmiller/erlydtl/blob/master/src/erlydtl_scanner.erl
 %%% @author    Roberto Saccon <rsaccon@gmail.com> [http://rsaccon.com]
 %%% @author    Evan Miller <emmiller@gmail.com>
+%%% @author    Thomas Heller <thheller@gmail.com>
+%%%
 %%% @copyright 2008 Roberto Saccon, Evan Miller
 %%% @doc 
 %%% Template language scanner
