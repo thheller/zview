@@ -1,5 +1,6 @@
 ebin
 *.swp
+deps
 erl_crash.dump
 examples/rendered_output
 src/erlydtl_parser.erl

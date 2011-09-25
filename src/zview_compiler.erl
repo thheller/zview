@@ -7,17 +7,17 @@
 -define(C, erl_syntax).
 -define(MFA,
   fun
-    (none, Fun, Args) ->
+    (none, AppFun, AppArgs) ->
       ?C:application(
         none,
-        ?C:atom(Fun),
-        Args);
+        ?C:atom(AppFun),
+        AppArgs);
 
-    (Mod, Fun, Args) ->
+    (Mod, AppFun, AppArgs) ->
       ?C:application(
         ?C:atom(Mod),
-        ?C:atom(Fun),
-        Args)
+        ?C:atom(AppFun),
+        AppArgs)
   end
 ).
 
@@ -44,7 +44,7 @@ to_beam({ast, TargetModule, Sources}) ->
   {ok, Binary}.
 
 
-to_module({ast, TargetModule, Sources} = Ast) ->
+to_module({ast, TargetModule, _Sources} = Ast) ->
   {ok, ModuleBinary} = to_beam(Ast),
 
   code:purge(TargetModule),
@@ -83,16 +83,32 @@ to_ast(ParseTree, TargetModule) ->
 
 
   ExportFuns = State#tpl_mod.exports,
-  
+
+  % map exported vars to either Fun(VarStack), or [{Key, Fun(VarStack)}]
+  % Fun(VarStack) is for {% export with=multiple args="yo" %}
+  % {Key, Fun} is for {% export key do %} body {% end %}
+  ExportVars = lists:map(
+    fun
+      ({Key, Callback}) ->
+        ?C:list([?C:tuple([ ?C:atom(Key), ?MFA(none, Callback, [ ?C:variable("VarStack") ]) ])]);
+      (Callback) ->
+        ?MFA(none, Callback, [ ?C:variable("VarStack") ])
+    end,
+    ExportFuns
+  ),
+
   RenderFunAst = ?C:function(
     ?C:atom(render),
     [
       ?C:clause([ ?C:variable("Input") ], none, [
           ?C:match_expr(
-            ?C:variable("VarStack"),
+            ?C:tuple([
+                ?C:atom(ok),
+                ?C:variable("VarStack")
+              ]),
             ?MFA(
               zview_runtime,
-              make_view_stack,
+              make_var_stack,
               [
                 ?C:variable("Input")
               ]
@@ -104,7 +120,7 @@ to_ast(ParseTree, TargetModule) ->
               lists,
               append,
               [
-                ?C:list([ ?MFA(none, ExportFun, [ ?C:variable("VarStack") ]) || ExportFun <- ExportFuns])
+                ?C:list(ExportVars)
               ]
             )
           ),
@@ -156,7 +172,6 @@ define_block_function_with_ast(Id, FunAst, #tpl_mod{blocks = Blocks} = State) ->
 transform_node({string, _, Value}, State) -> {ok, ?C:abstract(list_to_binary(Value)), State};
 
 transform_node({block, {block_tag, Id, Args}, BlockBody}, State) ->
-  ?debugVal(Id),
   BlockId = make_var_name(Id),
   BlockArgsAst = make_args_ast(Args),
   {FunName, NewState} = define_block_function(Id, BlockBody, State),
@@ -219,6 +234,10 @@ transform_node({apply_filter, ToVariable, {filter, FilterName, FilterArgs}}, Sta
   ),
 
   {ok, Code, State};
+
+transform_node({block, {export_block, Id, [{auto, ExportId}]}, BlockBody}, State) ->
+  {FunName, #tpl_mod{exports = Exports} = NewState} = define_block_function(Id, BlockBody, State),
+  {skip, NewState#tpl_mod{exports = [{make_var_name(ExportId), FunName} | Exports]}};
 
 transform_node({export_tag, Id, ExportArgs}, State) ->
   Code = make_args_ast(ExportArgs),
@@ -302,7 +321,7 @@ transform_node({trans, Var}, State) ->
 transform_node({string_literal, _, String}, State) ->
   {ok, ?C:abstract(unescape_string_literal(String)), State};
 
-transform_node(Unparsed, State) ->
+transform_node(Unparsed, _State) ->
   throw({unparsed, Unparsed}).
 
 transform_to_binary(Atom) ->
@@ -353,15 +372,11 @@ make_fun_name({for_keyword, {Row, Col}, _}) ->
 
 make_fun_name({export_keyword, {Row, Col}, _}) ->
   list_to_atom(lists:flatten([
-        "export_tag_at_row_",
+        "export_at_row_",
         integer_to_list(Row),
         "_col_",
         integer_to_list(Col)
-      ]));
-
-make_fun_name(Id) ->
-  ?debugVal(Id),
-  dummy_fun_name.
+      ])).
 
 variable_path({attribute, {{identifier, _, Attr}, Of}}, Path) ->
   AttrBin = list_to_binary(atom_to_list(Attr)),
@@ -396,33 +411,31 @@ compile_test_test() ->
     "{% if y == \"test\" and wtf %}true{{ true }}{% else %}false{% endif %}"
     "hello world"
     "{{ x | default: 'a', 'b', 'c' }}"
-    "{% for x in some.list %}{{ x | test | test: some.other.var, 'hello' }}{% endfor %}"
+    "{% for x in some.list %}{{ x }} {{ _parent.x }} {% endfor %}"
     "{% some_tag hello=arg2 more='test' %}"
     "{% some_tag hello=arg2 do %}"
     "some_tag_content"
     "{% end %}"
-    "{% export hello='world' dummy=wtf %}"
+    "{% export hello='world' dummy=y %}"
+    "{% export title do %}hello title{% end %}"
   , 
 
-  {source, _, Source} = to_source({from_source, DummyTpl}, compile_test),
+  % {source, _, Source} = to_source({from_source, DummyTpl}, compile_test),
+  % ?debugMsg(Source),
 
-  ?debugMsg(Source),
-
-  ok.
-
-dont_do_this() ->
-  DummyTpl = "",
   {ok, Module} = compile(DummyTpl, compile_test_dtl),
-  VarStack = [{stack, [
+  VarStack = [
         {y, "test"},
+        {x, "from args"},
         {true, "yeah"},
         {some, [
               {list, [a,b,c]}
             ]}
-      ]}],
+      ],
 
-  Result = Module:render(VarStack),
-  ?debugVal(Result),
-  ok = not_ok.
+  {ok, Result, Exports} = Module:render(VarStack),
+  ?debugMsg(Result),
+  ?debugVal(Exports),
+  ok.
 
 -endif.

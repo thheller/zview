@@ -7,21 +7,39 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
-resolve(Key, []) -> [];
-resolve(Key, [{stack, Vars} | VarStack]) ->
-  Value = case kvc:path(Key, Vars) of
-    [] -> resolve(Key, VarStack);
-    Other -> Other
-  end,
-
-  ?LOG({resolved, Key, Value, Vars}),
+resolve(Key, VarStack) ->
+  Value = resolve_it(Key, VarStack),
+  ?debugVal({resolve, Key, Value, VarStack}),
   Value.
 
+resolve_it(Key, []) -> [];
+
+resolve_it([<<"_parent">> | Key], [{stack, _} | VarStack]) ->
+  resolve_it(Key, VarStack);
+
+resolve_it(Key, [{stack, Vars} | VarStack]) ->
+  case kvc:path(Key, Vars) of
+    [] ->
+      resolve(Key, VarStack);
+    Value ->
+      Value
+  end.
+
+make_var_stack([{stack, [List]} | _] = Input) when is_list(List) ->
+  {ok, Input};
+
+make_var_stack(Input) when is_list(Input) ->
+  {ok, [{stack, Input}]}.
 
 call_tag(TagName, TagArgs, VarStack) ->
+  ?debugVal({tag, TagName, TagArgs, VarStack}),
   ["TagResult: ", atom_to_list(TagName)].
 
+call_block_tag({for, _, []}, _, _) ->
+  [];
+
 call_block_tag({for, VarNames, Var}, Block, VarStack) ->
+  ?debugVal({for, VarNames, Var}),
   iterate_block(VarNames, Var, Block, VarStack, []);
 
 call_block_tag(Tag, Block, VarStack) ->

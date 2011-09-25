@@ -2516,7 +2516,7 @@ yeccpars2_111_(__Stack0) ->
 yeccpars2_113_(__Stack0) ->
  [__5,__4,__3,__2,__1 | __Stack] = __Stack0,
  [begin
-   { export_block , __3 }
+   { export_block , __2 , __3 }
   end | __Stack].
 
 -compile({inline,yeccpars2_114_/1}).
