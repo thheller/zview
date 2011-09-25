@@ -1,0 +1,32 @@
+<html>
+  <head>
+    {{ title | default: 'My Page Title' }}
+  </head>
+  <body>
+    {% if links %}
+      {{ links }}
+    {% else %}
+      <ul>
+        <li>Default Links</li>
+      </ul>
+    {% endif %}
+  </body>
+</html>
+
+{% export layout="hi" foo=bar %}
+{% export title="hello world" %}
+{% export title do %}
+  Hello World
+{% end %}
+
+{% export nav %}
+<ul>
+</ul>
+{% endexport %}
+
+{% export content %}
+  <h1>Hello World</h1>
+{% endexport %}
+
+
+

@@ -1,0 +1,12 @@
+{application, ztpl,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { ztpl_app, []}},
+  {env, []}
+ ]}.
