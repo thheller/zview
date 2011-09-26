@@ -46,6 +46,7 @@
 
 -export([scan/1]). 
 
+-include_lib("eunit/include/eunit.hrl").
 
 %%====================================================================
 %% API
@@ -59,7 +60,28 @@
 %% @end
 %%--------------------------------------------------------------------
 scan(Template) ->
-    scan(Template, [], {1, 1}, in_text).
+  {ok, Scan} = scan(Template, [], {1, 1}, in_text),
+  {ok, cleanup(Scan, [])}.
+
+cleanup([], Out) -> lists:reverse(Out);
+cleanup([{string, StringLoc, String}, {open_tag, TagLoc, '{%'} | More ], Out) ->
+  cleanup(More, [{open_tag, TagLoc, '{%'}, {string, StringLoc, strip_whitespace(String)} | Out]);
+
+cleanup([{close_tag, TagLoc, '%}'}, {string, StringLoc, String} | More], Out) ->
+  cleanup(More, [{string, StringLoc, strip_until_newline(String)}, {close_tag, TagLoc, '%}'} | Out ]);
+
+cleanup([Other | In], Out) ->
+  cleanup(In, [Other | Out]).
+
+strip_whitespace([]) -> [];
+strip_whitespace(String) ->
+  Result = string:strip(String, right),
+  Result.
+
+strip_until_newline([]) -> [];
+strip_until_newline(String) ->
+  Result = re:replace(String, "\\s*\\n", "", [{return, list}]),
+  Result.
 
 scan([], Scanned, _, in_text) ->
     {ok, lists:reverse(lists:map(
@@ -282,10 +304,20 @@ char_type(_C) ->
 
 
 -ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
 
 var_ident_test() ->
-  Result = scan("{{ hello.world | bla: a, 'x' }}"),
+  {ok, Result} = scan("{{ hello.world | bla: a, 'x' }}"),
+  % ?debugVal(Result),
+  ok.
+
+cleanup_test() ->
+  Result = scan(
+    "line first
+    {% for x in y %}     
+      {{ x }}
+    {% endfor %}    
+    line after"),
+
   ?debugVal(Result).
 
 -endif.
