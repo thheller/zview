@@ -187,7 +187,6 @@ define_block_function_with_ast(Id, FunAst, #tpl_mod{blocks = Blocks} = State) ->
 transform_node({string, _, Value}, State) -> {ok, ?C:abstract(list_to_binary(Value)), State};
 
 transform_node({block, {block_tag, Id, Args}, BlockBody}, State) ->
-  BlockId = make_var_name(Id),
   BlockArgsAst = make_args_ast(Args),
   {FunName, NewState} = define_block_function(Id, BlockBody, State),
 
@@ -195,11 +194,8 @@ transform_node({block, {block_tag, Id, Args}, BlockBody}, State) ->
     zview_runtime,
     call_block_tag,
     [
-      ?C:tuple([
-          ?C:atom(block),
-          ?C:atom(BlockId),
-          BlockArgsAst
-        ]),
+      make_tagged_identifier(Id),
+      BlockArgsAst,
       ?C:implicit_fun(?C:arity_qualifier(?C:atom(FunName), ?C:integer(1))),
       ?C:variable("VarStack")
     ]
@@ -216,11 +212,11 @@ transform_node({for, {Id, {in, ForVariables, ForList}}, ForBody}, State) ->
   % zview_runtime:call_block_tag({for, [x], 'some.list'}, fun tpl_for_0/2, VarStack)
   Code = ?MFA(
     zview_runtime,
-    call_block_tag, 
+    call_for, 
     [
       ?C:tuple(
         [
-          ?C:atom(for),
+          ?C:atom(in),
           ?C:list([ ?C:atom(Var) || Var <- VarNames]),
           ListAst
         ]
@@ -241,7 +237,7 @@ transform_node({apply_filter, ToVariable, {filter, FilterName, FilterArgs}}, Sta
     zview_runtime,
     apply_filter,
     [
-      ?C:atom(make_var_name(FilterName)),
+      make_tagged_identifier(FilterName),
       ApplyTo,
       ?C:list([ ArgAst || {ok, ArgAst, _} <- FiltersAst ]),
       ?C:variable("VarStack")
@@ -302,7 +298,7 @@ transform_node({tag, Id, Args}, State) ->
     zview_runtime,
     call_tag,
     [
-      ?C:atom(make_var_name(Id)),
+      make_tagged_identifier(Id),
       make_args_ast(Args),
       ?C:variable("VarStack")
     ]
@@ -346,6 +342,13 @@ transform_arg({{identifier, _, _} = Id, Var}) ->
       ValAst
     ]).
 
+make_tagged_identifier({Mod, Fun}) ->
+  ?C:tuple([
+      ?C:atom(make_var_name(Mod)),
+      ?C:atom(make_var_name(Fun))
+    ]).
+
+make_var_name(default)  -> default;
 make_var_name({identifier, _, Atom}) -> Atom.
 
 make_args_ast(Args) ->
@@ -364,7 +367,18 @@ make_resolve_call(Path, State) ->
   ),
   {ok, Code, State}.
 
-make_fun_name({identifier, {Row, Col}, Id}) ->
+make_fun_name({{identifier, {Row, Col}, Mod}, {identifier, _, Fun}}) ->
+  list_to_atom(lists:flatten([
+        atom_to_list(Mod),
+        "_",
+        atom_to_list(Fun),
+        "_at_row_",
+        integer_to_list(Row),
+        "_col_",
+        integer_to_list(Col)
+    ]));
+
+make_fun_name({default, {identifier, {Row, Col}, Id}}) ->
   list_to_atom(lists:flatten([
         atom_to_list(Id),
         "_at_row_",
@@ -423,7 +437,7 @@ compile_test_test() ->
     "hello world"
     "{{ x | default: 'a', 'b', 'c' }}"
     "{% for x in some.list %}{{ x }} {{ _parent.x }} {% endfor %}"
-    "{% some_tag hello=arg2 more='test' %}"
+    "{% ext@some_tag hello=arg2 more='test' %}"
     "{% some_tag hello=arg2 do %}"
     "some_tag_content"
     "{% end %}"

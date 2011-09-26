@@ -43,6 +43,7 @@ Nonterminals
     Filter
     
     Tag
+    TaggedIdentifier
 
     Block
     BlockBraced
@@ -119,7 +120,7 @@ Terminals
     '==' '!='
     '>=' '<='
     '>' '<'
-    '(' ')'
+    '(' ')' '@'
     '_'.
 
 Rootsymbol
@@ -153,12 +154,15 @@ Variable -> identifier : {variable, '$1'}.
 Variable -> Variable '.' identifier : {attribute, {'$3', '$1'}}.
 
 Tag -> open_tag export_keyword Args close_tag: {export_tag, '$2', '$3'}.
-Tag -> open_tag identifier Args close_tag : {tag, '$2', '$3'}.
+Tag -> open_tag TaggedIdentifier Args close_tag : {tag, '$2', '$3'}.
 
 Block -> BlockBraced Elements EndBlockBraced: {block, '$1', '$2'}.
 BlockBraced -> open_tag export_keyword Args do_keyword close_tag : {export_block, '$2', '$3'}.
-BlockBraced -> open_tag identifier Args do_keyword close_tag : {block_tag, '$2', '$3'}.
+BlockBraced -> open_tag TaggedIdentifier Args do_keyword close_tag : {block_tag, '$2', '$3'}.
 EndBlockBraced -> open_tag end_keyword close_tag.
+
+TaggedIdentifier -> identifier '@' identifier : {'$1', '$3'}.
+TaggedIdentifier -> identifier : {default, '$1'}.
 
 CommentBlock -> CommentBraced Elements EndCommentBraced : {comment, '$2'}.
 CommentBraced -> open_tag comment_keyword close_tag.
@@ -214,7 +218,7 @@ IfNotEqualBraced -> open_tag ifnotequal_keyword IfNotEqualExpression Value close
 IfNotEqualExpression -> Value : '$1'.
 EndIfNotEqualBraced -> open_tag endifnotequal_keyword close_tag.
 
-Filter -> identifier FilterArgs : {filter, '$1', '$2'}.
+Filter -> TaggedIdentifier FilterArgs : {filter, '$1', '$2'}.
 
 FilterArgs -> '$empty' : [].
 FilterArgs -> FilterArgs ':' Variable : '$1' ++ ['$3'].

@@ -80,7 +80,7 @@ strip_whitespace(String) ->
 
 strip_until_newline([]) -> [];
 strip_until_newline(String) ->
-  Result = re:replace(String, "\\s*\\n", "", [{return, list}]),
+  Result = re:replace(String, "^\\s*\\n", "", [{return, list}]),
   Result.
 
 scan([], Scanned, _, in_text) ->
@@ -241,6 +241,9 @@ scan("=" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
 scan(":" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
     scan(T, [{':', {Row, Column}} | Scanned], {Row, Column + 1}, {in_code, Closer});
 
+scan("@" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
+   scan(T, [{'@', {Row, Column}} | Scanned], {Row, Column + 1}, {in_code, Closer});
+
 scan("." ++ T, Scanned, {Row, Column}, {_, Closer}) ->
    scan(T, [{'.', {Row, Column}} | Scanned], {Row, Column + 1}, {in_code, Closer});
 
@@ -248,7 +251,7 @@ scan("_(" ++ T, Scanned, {Row, Column}, {in_code, Closer}) ->
     scan(T, lists:reverse([{'_', {Row, Column}}, {'(', {Row, Column + 1}}], Scanned), {Row, Column + 2}, {in_code, Closer});
 
 scan("\n" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
-    scan(T, Scanned, {Row, Column + 1}, {in_code, Closer});
+    scan(T, Scanned, {Row + 1, Column + 1}, {in_code, Closer});
 
 scan("\t" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
     scan(T, Scanned, {Row, Column + 1}, {in_code, Closer});
@@ -306,8 +309,8 @@ char_type(_C) ->
 -ifdef(TEST).
 
 var_ident_test() ->
-  {ok, Result} = scan("{{ hello.world | bla: a, 'x' }}"),
-  % ?debugVal(Result),
+  {ok, Result} = scan("{{ hello.world | bla@wtf: a, 'x' }}"),
+  ?debugVal(Result),
   ok.
 
 cleanup_test() ->
@@ -317,7 +320,7 @@ cleanup_test() ->
       {{ x }}
     {% endfor %}    
     line after"),
-
-  ?debugVal(Result).
+  ?debugVal(Result),
+  ok.
 
 -endif.

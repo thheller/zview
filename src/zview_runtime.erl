@@ -25,18 +25,19 @@ apply_filter(_Filter, Value, _Args, _VarStack) ->
   Value.
 
 % TODO: implement tag calling
+% TagName = {Mod, Fun}
 call_tag(_TagName, _TagArgs, _VarStack) ->
   [].
 
 % for loop for an empty list, does nothing obviously
-call_block_tag({for, _, []}, _, _) ->
+call_for({in, _, []}, _, _) ->
   [];
 
-call_block_tag({for, VarNames, Var}, Block, VarStack) ->
-  iterate_block(VarNames, Var, Block, VarStack, []);
+call_for({in, VarNames, Var}, Block, VarStack) ->
+  iterate_block(VarNames, Var, Block, VarStack, []).
 
 % TODO: actually do something instead of just calling the body
-call_block_tag(_Tag, Block, VarStack) ->
+call_block_tag(_TagName, _TagArgs, Block, VarStack) ->
   Block(VarStack).
 
 'eq'(Left, Right) when Left == Right -> true;
@@ -95,7 +96,7 @@ for_loop_test() ->
       resolve(x, VarStack)
   end,
 
-  Result = call_block_tag({for, [x], [a,b,c]}, BlockFun, {var_stack, [], []}),
+  Result = call_for({in, [x], [a,b,c]}, BlockFun, {var_stack, [], []}),
 
   ?assertEqual([a,b,c], Result).
 
