@@ -66,6 +66,14 @@ call_for({in, VarNames, Var}, Block, VarStack) ->
 call_block_tag(_TagName, _TagArgs, Block, VarStack) ->
   Block(VarStack).
 
+boolean_op('eq', Left, Right) ->
+  try
+    equals(Left, Right)
+  catch
+    badarg ->
+      false
+  end;
+
 % TODO: implement all boolean ops, 
 boolean_op(Op, Left, Right) ->
   ?debugVal(Op),
@@ -85,8 +93,13 @@ to_string(Int) when is_integer(Int) -> integer_to_list(Int);
 to_string(Atom) when is_atom(Atom) -> atom_to_list(Atom);
 to_string(List) when is_list(List) -> List.
 
+% TODO: this will most likely fail for unicode comparisions
 equals(Left, Right) when Left =:= Right ->
   true;
+equals(Left, Right) when is_atom(Left) ->
+  equals(atom_to_list(Left), Right);
+equals(Left, Right) when is_atom(Right) ->
+  equals(Left, atom_to_list(Right));
 equals(Left, Right) when is_binary(Left) andalso is_list(Right) ->
   equals(Left, iolist_to_binary(Right));
 equals(Left, Right) when is_binary(Right) andalso is_list(Left) ->
