@@ -80,8 +80,7 @@ to_ast(ParseTree, TargetModule) ->
   ModuleAst = ?C:attribute(?C:atom(module), [?C:atom(TargetModule)]),
   ExportAst = ?C:attribute(?C:atom(export), [
       ?C:list([
-          ?C:arity_qualifier(?C:atom(render), ?C:integer(1)),
-          ?C:arity_qualifier(?C:atom(render), ?C:integer(2))
+          ?C:arity_qualifier(?C:atom(render), ?C:integer(1))
         ])
     ]),
 
@@ -105,15 +104,6 @@ to_ast(ParseTree, TargetModule) ->
     ?C:atom(render),
     [
       ?C:clause([ ?C:variable("Input") ], none, [
-          ?MFA(none, render, [ ?C:variable("Input"), ?C:atom(undefined) ])
-        ])
-    ]
-  ),
-
-  Render2FunAst = ?C:function(
-    ?C:atom(render),
-    [
-      ?C:clause([ ?C:variable("Input"), ?C:variable("Context") ], none, [
           ?C:match_expr(
             ?C:tuple([
                 ?C:atom(ok),
@@ -121,10 +111,9 @@ to_ast(ParseTree, TargetModule) ->
               ]),
             ?MFA(
               zview_runtime,
-              make_var_stack,
+              validate_var_stack,
               [
-                ?C:variable("Input"),
-                ?C:variable("Context")
+                ?C:variable("Input")
               ]
             )
           ),
@@ -155,8 +144,7 @@ to_ast(ParseTree, TargetModule) ->
     ModuleAst,
     ExportAst,
     FunsAst,
-    RenderFunAst,
-    Render2FunAst
+    RenderFunAst
   ]),
 
   {ast, TargetModule, Sources}.
@@ -261,6 +249,9 @@ transform_node({attribute, _} = Token, State) ->
 transform_node({variable, _} = Token, State) ->
   make_resolve_call(variable_path(Token, []), State);
 
+transform_node({'if', Expr, True}, State) ->
+  transform_node({ifelse, Expr, True, []}, State);
+
 transform_node({ifelse, Expr, True, False}, State) ->
   {ok, TrueAst, State2} = transform_tree(True, [], State),
   {ok, FalseAst, State3} = transform_tree(False, [], State2),
@@ -283,8 +274,9 @@ transform_node({expr, Op, Lhs, Rhs}, State) ->
 
   Code = ?MFA(
     zview_runtime,
-    Op,
+    boolean_op,
     [
+      ?C:atom(Op),
       LhsAst,
       RhsAst
     ]
@@ -331,6 +323,9 @@ transform_node({trans, Var}, State) ->
 
 transform_node({string_literal, _, String}, State) ->
   {ok, ?C:abstract(unescape_string_literal(String)), State};
+
+transform_node({number_literal, _, Number}, State) ->
+  {ok, ?C:integer(list_to_integer(Number)), State};
 
 transform_node(Unparsed, _State) ->
   throw({unparsed, Unparsed}).
@@ -429,38 +424,3 @@ unescape_string_literal("t" ++ Rest, Acc, slash) ->
 unescape_string_literal([C | Rest], Acc, slash) ->
   unescape_string_literal(Rest, [C | Acc], noslash).
 
--ifdef(TEST).
-
-compile_test_test() ->
-  DummyTpl = 
-    "{% if y == \"test\" and x %}true{{ true }}{% else %}false{% endif %}"
-    "hello world"
-    "{{ x | default: 'a', 'b', 'c' }}"
-    "{% for x in some.list %}{{ x }} {{ _parent.x }} {% endfor %}"
-    "{% ext@some_tag hello=arg2 more='test' %}"
-    "{% some_tag hello=arg2 do %}"
-    "some_tag_content"
-    "{% end %}"
-    "{% export hello='world' dummy=y %}"
-    "{% export title do %}hello title{% end %}"
-  , 
-
-  % {source, _, Source} = to_source({from_source, DummyTpl}, compile_test),
-  % ?debugMsg(Source),
-
-  {ok, Module} = compile(DummyTpl, compile_test_dtl),
-  VarStack = [
-        {y, "test"},
-        {x, "from args"},
-        {true, "yeah"},
-        {some, [
-              {list, [a,b,c]}
-            ]}
-      ],
-
-  {ok, Result, Exports} = Module:render(VarStack),
-  ?debugMsg(Result),
-  ?debugVal(Exports),
-  ok.
-
--endif.

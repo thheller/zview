@@ -67,16 +67,6 @@ Nonterminals
     ElseBraced
     EndIfBraced
     
-    IfEqualBlock
-    IfEqualBraced
-    IfEqualExpression
-    EndIfEqualBraced  
-    
-    IfNotEqualBlock
-    IfNotEqualBraced
-    IfNotEqualExpression
-    EndIfNotEqualBraced      
-
     Args
     FilterArgs
 
@@ -98,16 +88,12 @@ Terminals
     endfilter_keyword
     endfor_keyword
     endif_keyword
-    endifequal_keyword
-    endifnotequal_keyword
     endcomment_keyword
     export_keyword
     filter_keyword
     for_keyword
     identifier
     if_keyword
-    ifequal_keyword
-    ifnotequal_keyword
     in_keyword
     not_keyword
     number_literal
@@ -140,8 +126,6 @@ Elements -> Elements Block : '$1' ++ ['$2'].
 Elements -> Elements FilterBlock : '$1' ++ ['$2'].
 Elements -> Elements ForBlock : '$1' ++ ['$2'].
 Elements -> Elements IfBlock : '$1' ++ ['$2'].
-Elements -> Elements IfEqualBlock : '$1' ++ ['$2'].
-Elements -> Elements IfNotEqualBlock : '$1' ++ ['$2'].
 Elements -> Elements ValueBraced : '$1' ++ ['$2'].
 
 ValueBraced -> open_var Value close_var : {output, '$2'}.
@@ -205,18 +189,6 @@ Unot -> not_keyword IfExpression : {expr, 'not', '$2'}.
 
 ElseBraced -> open_tag else_keyword close_tag.
 EndIfBraced -> open_tag endif_keyword close_tag.
-
-IfEqualBlock -> IfEqualBraced Elements ElseBraced Elements EndIfEqualBraced : {ifequalelse, '$1', '$2', '$4'}.
-IfEqualBlock -> IfEqualBraced Elements EndIfEqualBraced : {ifequal, '$1', '$2'}.
-IfEqualBraced -> open_tag ifequal_keyword IfEqualExpression Value close_tag : ['$3', '$4'].
-IfEqualExpression -> Value : '$1'.
-EndIfEqualBraced -> open_tag endifequal_keyword close_tag.
-
-IfNotEqualBlock -> IfNotEqualBraced Elements ElseBraced Elements EndIfNotEqualBraced : {ifnotequalelse, '$1', '$2', '$4'}.
-IfNotEqualBlock -> IfNotEqualBraced Elements EndIfNotEqualBraced : {ifnotequal, '$1', '$2'}.
-IfNotEqualBraced -> open_tag ifnotequal_keyword IfNotEqualExpression Value close_tag : ['$3', '$4'].
-IfNotEqualExpression -> Value : '$1'.
-EndIfNotEqualBraced -> open_tag endifnotequal_keyword close_tag.
 
 Filter -> TaggedIdentifier FilterArgs : {filter, '$1', '$2'}.
 
