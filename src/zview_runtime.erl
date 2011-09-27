@@ -17,7 +17,8 @@
     boolean_op/3,
     apply_filter/4,
     to_string/1,
-    is_true/1
+    is_true/1,
+    equals/2
   ]).
 
 -include_lib("eunit/include/eunit.hrl").
@@ -84,10 +85,23 @@ to_string(Int) when is_integer(Int) -> integer_to_list(Int);
 to_string(Atom) when is_atom(Atom) -> atom_to_list(Atom);
 to_string(List) when is_list(List) -> List.
 
-%%% --- INTERNAL METHODS ---
-'eq'(Left, Right) when Left == Right -> true;
-'eq'(_Left, _Right) ->
+equals(Left, Right) when Left =:= Right ->
+  true;
+equals(Left, Right) when is_binary(Left) andalso is_list(Right) ->
+  equals(Left, iolist_to_binary(Right));
+equals(Left, Right) when is_binary(Right) andalso is_list(Left) ->
+  equals(iolist_to_binary(Left), Right);
+equals(Left, Right) when is_integer(Left) and not is_integer(Right)->
+  equals(Left, convert_to_int(Right));
+equals(Left, Right) when is_integer(Right) and not is_integer(Left) ->
+  equals(convert_to_int(Left), Right);
+equals(_Left, _Right) ->
   false.
+
+convert_to_int(Bin) when is_binary(Bin) -> convert_to_int(binary_to_list(Bin));
+convert_to_int(List) when is_list(List) -> list_to_integer(List).
+
+%%% --- INTERNAL METHODS ---
 
 'and'(true, true) -> true;
 'and'(false, true) -> false;

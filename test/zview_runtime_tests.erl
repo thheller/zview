@@ -23,6 +23,26 @@ for_loop_counter_helper(Var) ->
   BlockFun = fun(VarStack) ->
       zview_runtime:resolve([<<"_for">>, Var], VarStack)
   end,
-
   zview_runtime:call_for({in, [x], [a,b,c]}, BlockFun, {var_stack, [], [], root}).
+
+eq_test() ->
+  ?assertEqual(true, zview_runtime:equals("a", "a")),
+  ?assertEqual(true, zview_runtime:equals("a", <<"a">>)),
+  ?assertEqual(true, zview_runtime:equals(<<"a">>, <<"a">>)),
+  ?assertEqual(true, zview_runtime:equals(<<"a">>, "a")),
+  ?assertEqual(true, zview_runtime:equals([<<"a">>, "bc"], <<"abc">>)),
+  ?assertEqual(true, zview_runtime:equals(1, 1)),
+  ?assertEqual(true, zview_runtime:equals(1, "1")),
+  ?assertEqual(true, zview_runtime:equals("1", 1)),
+  ?assertEqual(true, zview_runtime:equals(<<"1">>, 1)),
+  ?assertEqual(true, zview_runtime:equals(1, <<"1">>)),
+  ?assertEqual(false, zview_runtime:equals(1, 2)),
+  ?assertEqual(false, zview_runtime:equals("2", 1)),
+  ?assertEqual(false, zview_runtime:equals(1, "2")),
+  % TODO: decide how i want to deal with badarg
+  % ?assertEqual(false, zview_runtime:equals(1, "b")),
+  ?assertEqual(false, zview_runtime:equals("a", "b")),
+  ?assertEqual(false, zview_runtime:equals(<<"abc">>, ["x", <<"y">>, "z"])),
+  ok.
+
 
