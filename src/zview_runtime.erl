@@ -74,6 +74,9 @@ boolean_op('eq', Left, Right) ->
       false
   end;
 
+boolean_op('and', Left, Right) ->
+  'and'(Left, Right);
+
 % TODO: implement all boolean ops, 
 boolean_op(Op, Left, Right) ->
   ?debugVal(Op),
@@ -130,7 +133,7 @@ make_stack_vars(_VarNames, _Item) -> throw({cannot_assign_multiple_yet}).
 make_for_counter(Val) when is_list(Val) ->
   #for_counter{length = length(Val), current = 0}.
 
-iterate_block(ForState, _VarNames, [], _Block, _VarStack, Results) ->
+iterate_block(_ForState, _VarNames, [], _Block, _VarStack, Results) ->
   lists:reverse(Results);
 
 iterate_block(#for_counter{current = Current } = ForState, VarNames, [Item | Rest], Block, VarStack, Results) ->
@@ -157,7 +160,7 @@ resolve_it(Key, {var_stack, _Context, Vars, Parent}) ->
   end.
 
 find_for_context(root) -> throw(not_inside_for_loop);
-find_for_context({var_stack, Context, _Vars, Parent}) when is_record(Context, for_counter) ->
+find_for_context({var_stack, Context, _Vars, _Parent}) when is_record(Context, for_counter) ->
   Context;
 
 find_for_context({var_stack, _, _, Parent}) ->
@@ -179,4 +182,5 @@ resolve_for_counter(<<"last">>, #for_counter{current = Current, length = Length}
   Current == Length - 1;
 
 resolve_for_counter(Unknown, ForState) ->
-  throw({unknown_for_variable, Unknown}).
+  throw({unknown_for_variable, Unknown, ForState}).
+
