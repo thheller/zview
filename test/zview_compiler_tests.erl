@@ -32,7 +32,7 @@ super_meaningless_template_parse_and_compile_test() ->
   ?debugMsg(Source),
 
   {ok, Module} = zview_compiler:compile(Doc1, compile_test_dtl),
-  Vars = [
+, Vars = [
         {y, "test"},
         {x, "from args"},
         {true, "yeah"},

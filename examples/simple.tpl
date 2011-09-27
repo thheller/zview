@@ -6,7 +6,13 @@
   </head>
   <body>
     {% for x in list %}
-    <span>{{ x }}</span>
+    {% if _for.first %}
+      first
+    {% endif %}
+      <span id="{{ _for.index }}">{{ x }}</span>
+    {% if _for.last %}
+      last
+    {% endif %}
     {% endfor %}
 
     {{ list }}

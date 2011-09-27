@@ -31,7 +31,9 @@ usage() ->
 
 run_example(_Name, Source, Vars) ->
   {ok, run_example_mod} = zview_compiler:compile(Source, run_example_mod),
-  {ok, Output, Exports} = run_example_mod:render(Vars),
+
+  VarStack = zview_runtime:new_var_stack(Vars),
+  {ok, Output, Exports} = run_example_mod:render(VarStack),
 
   lists:map(
     fun({Key, Value}) ->
