@@ -3,7 +3,7 @@ zview - Introduction
 
 This is zview, a Template Engine for Erlang (at least it will be sometime in the future).
 
-Its in early alpha and not recommended for use (Half of the Stuff doesnt work yet).
+Its in early alpha and not recommended for use (half of the Stuff doesnt work yet).
 
 It started out as a fork of erlydtl since I wanted to address some of the issue I had
 with it. Turned out that changing those was way more work than expected and would have 
@@ -37,7 +37,7 @@ I'll highlight the major differences later, first lets have a look:
         Simple Tags
         {% render "other_template" %}
 
-        Simple Block Tag, vars declared in Args are only available inside Block 
+        Simple Block Tag, vars declared in Args are only available inside the do/end Block 
         {% with var1="test" var2=some.nested.json.data.struct do %}
           {{ var2 }}
         {% end %}
@@ -56,7 +56,7 @@ I'll highlight the major differences later, first lets have a look:
       </body>
     </html>
 
-Should look familiar to anyone having used erlydtl, Django Template or Liquid before.
+Should look familiar to anyone having used erlydtl, Django Templates or Liquid before.
 
 Documentation
 -----
@@ -132,3 +132,20 @@ $vars
 
     
 Probably more I cant think of right now.
+
+
+Thanks
+===
+
+- [erlydtl](https://github.com/evanmiller/erlydtl)
+  Without it I probably wouldnt even have started, never written a parser/compiler before so
+  it was a very valuable Reference. Also obviously Django Templates and Liquid for Inspiration.
+
+- [kvc](https://github.com/etrepum/kvc)
+  Used to do most Variable Lookups. Its awesome.
+
+
+License
+---
+
+MIT
