@@ -1,18 +1,70 @@
-= TODO
+zview - Introduction
+==============
 
-Write README.
+This is zview, a Template Engine for Erlang (at least it will be sometime in the future).
 
-= Motivation
+Its in early alpha and not recommended for use (Half of the Stuff doesnt work yet).
 
-I started using erlydtl but felt limited quite soon, so I started building this based
-on the erlydtl scanner/parser.
+It started out as a fork of erlydtl since I wanted to address some of the issue I had
+with it. Turned out that changing those was way more work than expected and would have 
+broken most DTL Templates anyway, so I started from scratch, only reusing the
+erlydtl\_scanner and erlydtl\_parser, although those were modified too.
 
-It still uses the same syntax mostly, but doesnt aim to be compatible to DTL or any
-other similar Template Engine (eg. liquid).
+I'll highlight the major differences later, first lets have a look:
 
-Also it should be way easier to extend than erlydtl is.
+    <html>
+      <head>
+        <title>{{ title | default: 'Default Page Title' }}</title>
+      </head>
 
-= Differences:
+      <body>
+
+        The usual for loop
+        <ul>
+          {% for x in items %}
+            <li>{{ x }}</li>
+          {% endfor %}
+        </ul>
+
+        The usual if/else
+
+        {% if foo == 'bar' %}
+          bar
+        {% else %}
+          {{ foo }}
+        {% endif %}
+
+        Simple Tags
+        {% render "other_template" %}
+
+        Simple Block Tag, vars declared in Args are only available inside Block 
+        {% with var1="test" var2=some.nested.json.data.struct do %}
+          {{ var2 }}
+        {% end %}
+
+        Not defined, outputs nothing (instead of undefined like erlydtl)
+        {{ var1 }}
+
+        Custom Tags are defined by prefixing it with alias@
+        {% ext@simple_tag arg1=title %}
+
+        Custom Tags can have Blocks too
+        {% ext@custom_tag also="has args" do %}
+          inside custom tag
+        {% end %}
+
+      </body>
+    </html>
+
+Should look familiar to anyone having used erlydtl, Django Template or Liquid before.
+
+Documentation
+-----
+
+TODO!!!
+
+Differences in the Templates itself
+---
 
 Main Difference is that I wanted to be able to have the 
 Template export Key/Value Pairs to the caller.
@@ -23,31 +75,60 @@ Template export Key/Value Pairs to the caller.
       <h1>Super Duper Title</h1>
     {% end %}
 
-    {ok, Content, Exports} = template:render([{var, "test"}]).
+    {ok, Content, Exports} = zview:render("my_template.tpl", [{var, "test"}]).
 
-Exports will be a proplist containing [{meta, "data"}, {some, "test"}, {block, ...}].
+Exports will be a proplist containing [{meta, "data"}, {some, "test"}, {block, "h1..."}].
 
 I wanted this as a stricter alternative to View Inheritance. Templates are completely standalone
-and cannot have dependencies to the outside (other than the runtime, tags). Although its trivial
-to implement inheritance with a couple lines of plain erlang.
-
+and cannot have dependencies to the outside (other than the runtime, tags). You could still
+achieve the same as View Inheritance with a simple loop and some exports.
+ 
     {% export layout="my_page_layout.html" %}
     {% export content do %}
       Page Content
     {% end %}
 
-== Custom Block Tags:
+Custom Block Tags:
 
-    {% some_tag kw="args" var=some.list do %}
+    {% ext@some_tag kw="args" var=some.list do %}
       tag content
     {% end %}
 
-== Custom Tags:
+Custom Tags:
 
-    {% some_tag with="args" %}
+    {% ext@some_tag with="args" %}
 
-== Filters may have multiple Args:
+Filters may have multiple Args, and of course can be custom too:
 
-    {{ some_var | some_filter: 'arg1', arg2, 'arg3' }}
+    {{ some_var | mod@some_filter: 'arg1', arg2, 'arg3' }}
 
+Differences in the Runtime
+---
+
+Way too many to even start comparing them.
+
+"Special" Variables
+----
+
+There are some Special Variables that you can access in Templates giving access to
+the Template Context itself. They are prefixed by "$"
+
+$for
+---
+
+Same as forloop in DTL, Liquid and only available inside for loops, will raise an Error
+if called outside for loop.
+
+    {{ $for.index }} Also has the common forloop attributes (index, index0, rindex, rindex0, first, last, length)
+
+$vars
+---
+
+{Key, Value} Pairs of all Vars given to the Template render fun. Mainly intended for debugging.
+    
+    {% for key, value in $vars %} 
+      Key: {{ key }} Value: {{ value }}
+    {% endfor %}
+
+    
 Probably more I cant think of right now.

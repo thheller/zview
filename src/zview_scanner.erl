@@ -60,28 +60,7 @@
 %% @end
 %%--------------------------------------------------------------------
 scan(Template) ->
-  {ok, Scan} = scan(Template, [], {1, 1}, in_text),
-  {ok, cleanup(Scan, [])}.
-
-cleanup([], Out) -> lists:reverse(Out);
-cleanup([{string, StringLoc, String}, {open_tag, TagLoc, '{%'} | More ], Out) ->
-  cleanup(More, [{open_tag, TagLoc, '{%'}, {string, StringLoc, strip_whitespace(String)} | Out]);
-
-cleanup([{close_tag, TagLoc, '%}'}, {string, StringLoc, String} | More], Out) ->
-  cleanup(More, [{string, StringLoc, strip_until_newline(String)}, {close_tag, TagLoc, '%}'} | Out ]);
-
-cleanup([Other | In], Out) ->
-  cleanup(In, [Other | Out]).
-
-strip_whitespace([]) -> [];
-strip_whitespace(String) ->
-  Result = string:strip(String, right),
-  Result.
-
-strip_until_newline([]) -> [];
-strip_until_newline(String) ->
-  Result = re:replace(String, "^\\s*\\n", "", [{return, list}]),
-  Result.
+  scan(Template, [], {1, 1}, in_text).
 
 scan([], Scanned, _, in_text) ->
     {ok, lists:reverse(lists:map(
@@ -262,7 +241,7 @@ scan(" " ++ T, Scanned, {Row, Column}, {_, Closer}) ->
 
 scan([H | T], Scanned, {Row, Column}, {in_code, Closer}) ->
     case char_type(H) of
-        letter_underscore ->
+        X when X =:= letter_underscore; X =:= dollar ->
             scan(T, [{identifier, {Row, Column}, [H]} | Scanned], {Row, Column + 1}, {in_identifier, Closer});
         digit ->
             scan(T, [{number_literal, {Row, Column}, [H]} | Scanned], {Row, Column + 1}, {in_number, Closer});
@@ -300,6 +279,8 @@ append_text_char(Scanned, {Row, Column}, Char) ->
 
 char_type(C) when ((C >= $a) andalso (C =< $z)) orelse ((C >= $A) andalso (C =< $Z)) orelse (C == $_) ->
     letter_underscore;
+char_type($$) ->
+    dollar; 
 char_type(C) when ((C >= $0) andalso (C =< $9)) ->
     digit;
 char_type(_C) ->
@@ -314,12 +295,14 @@ var_ident_test() ->
   ok.
 
 cleanup_test() ->
-  Result = scan(
+  {ok, Result} = scan(
     "line first
-    {% for x in y %}     
+    {% for x in $vars.parent %}     
+      {{ $for.index }}
       {{ x }}
     {% endfor %}    
     line after"),
+
   ?debugVal(Result),
   ok.
 

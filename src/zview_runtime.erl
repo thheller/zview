@@ -127,7 +127,8 @@ convert_to_int(List) when is_list(List) -> list_to_integer(List).
 
 
 make_stack_vars([VarName], Item) -> [{VarName, Item}];
-make_stack_vars(_VarNames, _Item) -> throw({cannot_assign_multiple_yet}).
+make_stack_vars([N1, N2], {V1, V2}) -> [{N1, V1}, {N2, V2}];
+make_stack_vars(_VarNames, _Item) -> throw(cannot_assign_multiple_yet).
 
 
 make_for_counter(Val) when is_list(Val) ->
@@ -144,11 +145,17 @@ iterate_block(#for_counter{current = Current } = ForState, VarNames, [Item | Res
 
 resolve_it(_Key, root) -> [];
 
-resolve_it([<<"_for">>, VarName], VarStack)->
+resolve_it([<<"$vars">>], VarStack) ->
+  collect_var_stack_vars(VarStack, []);
+
+resolve_it([<<"$context">>, <<"vars">>], {var_stack, _Context, Vars, _Parent}) ->
+  Vars;
+
+resolve_it([<<"$for">>, VarName], VarStack)->
   ForState = find_for_context(VarStack),
   resolve_for_counter(VarName, ForState);
 
-resolve_it([<<"_parent">> | Key], {var_stack, _Context, _Vars, Parent}) ->
+resolve_it([<<"$parent">> | Key], {var_stack, _Context, _Vars, Parent}) ->
   resolve_it(Key, Parent);
 
 resolve_it(Key, {var_stack, _Context, Vars, Parent}) ->
@@ -158,6 +165,12 @@ resolve_it(Key, {var_stack, _Context, Vars, Parent}) ->
     Value ->
       Value
   end.
+
+collect_var_stack_vars(root, Result) ->
+  lists:flatten(lists:reverse(Result));
+
+collect_var_stack_vars({var_stack, _Context, Vars, Parent}, Result) ->
+  collect_var_stack_vars(Parent, [Vars | Result]).
 
 find_for_context(root) -> throw(not_inside_for_loop);
 find_for_context({var_stack, Context, _Vars, _Parent}) when is_record(Context, for_counter) ->

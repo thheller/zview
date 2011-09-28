@@ -44,4 +44,8 @@ run_example(_Name, Source, Vars) ->
 
   io:format("========= Output:~n~s~n", [Output]),
 
+  Bin = iolist_to_binary(Output),
+
+  io:format("========= Binary:~n~p~n", [Bin]),
+
   ok.

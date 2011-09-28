@@ -12,7 +12,7 @@ for_loop_test() ->
   ?assertEqual([a,b,c], for_loop_helper(x)).
 
 for_loop_counter_helper(Var) ->
-  for_loop_helper([<<"_for">>, Var]).
+  for_loop_helper([<<"$for">>, Var]).
 
 for_loop_counter_test() ->
   ?assertEqual([3,3,3], for_loop_counter_helper(<<"length">>)),

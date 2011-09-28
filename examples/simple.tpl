@@ -6,15 +6,24 @@
   </head>
   <body>
     {% for x in list %}
-    {% if _for.first %}
+      {% if $for.first %}
       first
-    {% endif %}
-      <span id="{{ _for.index }}">{{ x }}</span>
-    {% if _for.last %}
+      {% endif %}
+      <span id="{{ $for.index }}">{{ x }}</span>
+      {% if $for.last %}
       last
-    {% endif %}
+      {% endif %}
     {% endfor %}
 
-    {{ list }}
+    <table>
+      <tbody>
+        {% for k, v in $context.vars %}
+        <tr>
+          <td>{{ k }}</td>
+          <td>{{ v }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </body>
 </html>

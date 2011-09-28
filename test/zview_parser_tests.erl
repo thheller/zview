@@ -31,7 +31,7 @@ example1_test() ->
 
 
 example2_test() ->
-  Doc = "{% if x %} {% some_tag arg=x %} {% endif %}",
+  Doc = "{% if x %} {% some_tag arg=$x %} {% endif %}",
 
   {ok, Scan} = zview_scanner:scan(Doc),
   {ok, ParseTree} = zview_parser:parse(Scan),
