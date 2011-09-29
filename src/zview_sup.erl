@@ -1,5 +1,5 @@
 
--module(ztpl_sup).
+-module(zview_sup).
 
 -behaviour(supervisor).
 
@@ -24,5 +24,7 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-    {ok, { {one_for_one, 5, 10}, []} }.
+  {ok, { {one_for_one, 5, 10}, [
+        ?CHILD(zview_server, worker)
+      ]} }.
 

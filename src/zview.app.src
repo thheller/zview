@@ -1,12 +1,12 @@
-{application, ztpl,
+{application, zview,
  [
-  {description, ""},
-  {vsn, "1"},
+  {description, "zview templates"},
+  {vsn, "0.0.1"},
   {registered, []},
   {applications, [
                   kernel,
                   stdlib
                  ]},
-  {mod, { ztpl_app, []}},
+  {mod, { zview_app, []}},
   {env, []}
  ]}.

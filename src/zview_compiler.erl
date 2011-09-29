@@ -49,8 +49,7 @@ to_module({ast, TargetModule, _Sources} = Ast) ->
 
   code:purge(TargetModule),
   {module, _} = code:load_binary(TargetModule, atom_to_list(TargetModule) ++ ".erl", ModuleBinary),
-
-  {ok, TargetModule}.
+  ok.
 
 compile(Bin, TargetModule) when is_binary(Bin) ->
   compile(binary_to_list(Bin), TargetModule);

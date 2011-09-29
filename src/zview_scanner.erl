@@ -60,7 +60,26 @@
 %% @end
 %%--------------------------------------------------------------------
 scan(Template) ->
-  scan(Template, [], {1, 1}, in_text).
+  {ok, Scan} = scan(Template, [], {1, 1}, in_text),
+  Cleaned = cleanup(Scan, []),
+  {ok, Cleaned}.
+
+
+cleanup([], Result) ->
+  lists:reverse(Result);
+cleanup([{string, SLoc, String}, {open_tag, _, _} = Tag | More], Result) ->
+  cleanup(More, [Tag, {string, SLoc, strip_leading_newline(String)} | Result]);
+cleanup([Other | More], Result) ->
+  cleanup(More, [Other | Result]).
+
+% that should be simpler?
+strip_leading_newline(String) ->
+  case string:strip(lists:reverse(String), left) of
+    [$\n | More] ->
+      lists:reverse(More);
+    _ ->
+      String
+  end.
 
 scan([], Scanned, _, in_text) ->
     {ok, lists:reverse(lists:map(

@@ -28,10 +28,10 @@ super_meaningless_template_parse_and_compile_test() ->
     "inside else"
     "{% endif %}",
 
-  {source, _, Source} = zview_compiler:to_source({from_source, Doc1}, compile_test),
-  ?debugMsg(Source),
+  % {source, _, Source} = zview_compiler:to_source({from_source, Doc1}, compile_test),
+  % ?debugMsg(Source),
 
-  {ok, Module} = zview_compiler:compile(Doc1, compile_test_dtl),
+  ok = zview_compiler:compile(Doc1, compile_test_dtl),
   Vars = [
         {y, "test"},
         {x, "from args"},
@@ -43,7 +43,7 @@ super_meaningless_template_parse_and_compile_test() ->
 
   VarStack = zview_runtime:new_var_stack(Vars),
 
-  {ok, Result, Exports} = Module:render(VarStack),
+  {ok, Result, Exports} = compile_test_dtl:render(VarStack),
   ?debugMsg(Result),
 
   ?assertEqual(4, length(Exports)),
