@@ -3,6 +3,6 @@ ebin
 deps
 erl_crash.dump
 examples/rendered_output
-src/erlydtl_parser.erl
+src/zview_parser.erl
 *.beam
 .eunit
