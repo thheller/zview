@@ -107,19 +107,18 @@ Differences in the Runtime
 
 Way too many to even start comparing them.
 
-"Special" Variables
+"Context" Variables
 ----
 
-There are some Special Variables that you can access in Templates giving access to
-the Template Context itself. They are prefixed by "$"
+There are Variables that are only availble inside certains contexts/blocks. They are prefixed by "$".
 
-$for
+$loop
 ---
 
 Same as forloop in DTL, Liquid and only available inside for loops, will raise an Error
 if called outside for loop.
 
-    {{ $for.index }} Also has the common forloop attributes (index, index0, rindex, rindex0, first, last, length)
+    {{ $loop.index }} Also has the common forloop attributes (index, index0, rindex, rindex0, first, last, length)
 
 $vars
 ---

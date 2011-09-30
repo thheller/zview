@@ -10,7 +10,7 @@ super_meaningless_template_parse_and_compile_test() ->
     "{% end %}"
     "{{ title | default: 'My Page Title' }}"
     "{% for x in content.by_group.content %}"
-      "<div id=\"{{ x.id }}\" class=\"content\">{{ x.content }}</div>"
+      "<div id=\"{{ x.id }}\" class=\"content\">{{ $loop.index.whatever }}: {{ x.content }}</div>"
     "{% endfor %}"
     "{% builtin_tag foo=bar do %}"
       "inside builtin_tag"

@@ -41,6 +41,8 @@ Nonterminals
     Value
     Variable
     Filter
+
+    VarOrLiteral
     
     Tag
     TaggedIdentifier
@@ -66,6 +68,9 @@ Nonterminals
     IfExpression
     ElseBraced
     EndIfBraced
+
+    ListExpr
+    ListTail
     
     Args
     FilterArgs
@@ -107,6 +112,7 @@ Terminals
     '>=' '<='
     '>' '<'
     '(' ')' '@'
+    '$' '[' ']'
     '_'.
 
 Rootsymbol
@@ -131,11 +137,23 @@ Elements -> Elements ValueBraced : '$1' ++ ['$2'].
 ValueBraced -> open_var Value close_var : {output, '$2'}.
 
 Value -> Value '|' Filter : {apply_filter, '$1', '$3'}.
+
 Value -> Variable : '$1'.
 Value -> Literal : '$1'.
+Value -> ListExpr : '$1'.
 
+Variable -> '$' identifier : {svariable, '$2'}.
 Variable -> identifier : {variable, '$1'}.
 Variable -> Variable '.' identifier : {attribute, {'$3', '$1'}}.
+
+VarOrLiteral -> Literal : '$1'.
+VarOrLiteral -> Variable : '$1'.
+
+ListExpr -> '[' ']' : empty_list.
+ListExpr -> '[' VarOrLiteral ListTail : {list, {list_item, '$2', '$3'}}.
+
+ListTail -> ']' : list_end.
+ListTail -> ',' VarOrLiteral ListTail : {list_item, '$2', '$3'}.
 
 Tag -> open_tag export_keyword Args close_tag: {export_tag, '$2', '$3'}.
 Tag -> open_tag TaggedIdentifier Args close_tag : {tag, '$2', '$3'}.

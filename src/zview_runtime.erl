@@ -11,11 +11,11 @@
 % functions intended to be called by templates mostly
 -export([
     validate_var_stack/1,
-    call_tag/3,
+    call_tag/4,
+    call_block_tag/5,
+    apply_filter/5,
     call_for/3,
-    call_block_tag/4,
     boolean_op/3,
-    apply_filter/4,
     to_string/1,
     is_true/1,
     equals/2
@@ -46,13 +46,19 @@ validate_var_stack(_) ->
   invalid_var_stack.
 
 % TODO: implement filters
-apply_filter(_Filter, Value, _Args, _VarStack) ->
+apply_filter(CallingTemplate, Filter, Value, Args, VarStack) ->
+  Call = {CallingTemplate, Filter, Value, Args, VarStack},
+  ?debugVal(Call),
   Value.
 
 % TODO: implement tag calling
 % TagName = {Mod, Fun}
-call_tag(_TagName, _TagArgs, _VarStack) ->
+call_tag(_CallingTemplate, _TagName, _TagArgs, _VarStack) ->
   [].
+
+% TODO: actually do something instead of just calling the body
+call_block_tag(_CallingTemplate, _TagName, _TagArgs, Block, VarStack) ->
+  Block(VarStack).
 
 % for loop for an empty list, does nothing obviously
 call_for({in, _, []}, _, _) ->
@@ -61,10 +67,6 @@ call_for({in, _, []}, _, _) ->
 call_for({in, VarNames, Var}, Block, VarStack) ->
   ForState = make_for_counter(Var),
   iterate_block(ForState, VarNames, Var, Block, VarStack, []).
-
-% TODO: actually do something instead of just calling the body
-call_block_tag(_TagName, _TagArgs, Block, VarStack) ->
-  Block(VarStack).
 
 boolean_op('eq', Left, Right) ->
   try
@@ -93,8 +95,9 @@ is_true(_) -> true.
 
 to_string([]) -> [];
 to_string(Int) when is_integer(Int) -> integer_to_list(Int);
-to_string(Atom) when is_atom(Atom) -> atom_to_list(Atom);
-to_string(List) when is_list(List) -> List.
+to_string(Atom) when is_atom(Atom) -> list_to_binary(atom_to_list(Atom));
+to_string(List) when is_list(List) ->
+  erlang:iolist_to_binary(List).
 
 % TODO: this will most likely fail for unicode comparisions
 equals(Left, Right) when Left =:= Right ->
@@ -130,7 +133,6 @@ make_stack_vars([VarName], Item) -> [{VarName, Item}];
 make_stack_vars([N1, N2], {V1, V2}) -> [{N1, V1}, {N2, V2}];
 make_stack_vars(_VarNames, _Item) -> throw(cannot_assign_multiple_yet).
 
-
 make_for_counter(Val) when is_list(Val) ->
   #for_counter{length = length(Val), current = 0}.
 
@@ -145,18 +147,8 @@ iterate_block(#for_counter{current = Current } = ForState, VarNames, [Item | Res
 
 resolve_it(_Key, root) -> [];
 
-resolve_it([<<"$vars">>], VarStack) ->
-  collect_var_stack_vars(VarStack, []);
-
-resolve_it([<<"$context">>, <<"vars">>], {var_stack, _Context, Vars, _Parent}) ->
-  Vars;
-
-resolve_it([<<"$for">>, VarName], VarStack)->
-  ForState = find_for_context(VarStack),
-  resolve_for_counter(VarName, ForState);
-
-resolve_it([<<"$parent">> | Key], {var_stack, _Context, _Vars, Parent}) ->
-  resolve_it(Key, Parent);
+resolve_it([<<"$">> | Key], VarStack) ->
+  resolve_context_variable(Key, VarStack);
 
 resolve_it(Key, {var_stack, _Context, Vars, Parent}) ->
   case kvc:path(Key, Vars) of
@@ -165,6 +157,22 @@ resolve_it(Key, {var_stack, _Context, Vars, Parent}) ->
     Value ->
       Value
   end.
+
+resolve_context_variable([<<"vars">>], VarStack) ->
+  collect_var_stack_vars(VarStack, []);
+  
+resolve_context_variable([<<"context">>, <<"vars">>], {var_stack, _Context, Vars, _Parent}) ->
+  Vars;
+
+resolve_context_variable([<<"loop">>, VarName], VarStack)->
+  ForState = find_for_context(VarStack),
+  resolve_for_counter(VarName, ForState);
+
+resolve_context_variable([<<"parent">> | Key], {var_stack, _Context, _Vars, Parent}) ->
+  resolve(Key, Parent);
+
+resolve_context_variable(Key, VarStack) ->
+  [].
 
 collect_var_stack_vars(root, Result) ->
   lists:flatten(lists:reverse(Result));

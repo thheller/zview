@@ -239,6 +239,15 @@ scan("=" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
 scan(":" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
     scan(T, [{':', {Row, Column}} | Scanned], {Row, Column + 1}, {in_code, Closer});
 
+scan("$" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
+    scan(T, [{'$', {Row, Column}} | Scanned], {Row, Column + 1}, {in_code, Closer});
+
+scan("[" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
+    scan(T, [{'[', {Row, Column}} | Scanned], {Row, Column + 1}, {in_code, Closer});
+
+scan("]" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
+    scan(T, [{']', {Row, Column}} | Scanned], {Row, Column + 1}, {in_code, Closer});
+
 scan("@" ++ T, Scanned, {Row, Column}, {_, Closer}) ->
    scan(T, [{'@', {Row, Column}} | Scanned], {Row, Column + 1}, {in_code, Closer});
 
@@ -260,7 +269,7 @@ scan(" " ++ T, Scanned, {Row, Column}, {_, Closer}) ->
 
 scan([H | T], Scanned, {Row, Column}, {in_code, Closer}) ->
     case char_type(H) of
-        X when X =:= letter_underscore; X =:= dollar ->
+        X when X =:= letter_underscore ->
             scan(T, [{identifier, {Row, Column}, [H]} | Scanned], {Row, Column + 1}, {in_identifier, Closer});
         digit ->
             scan(T, [{number_literal, {Row, Column}, [H]} | Scanned], {Row, Column + 1}, {in_number, Closer});
@@ -309,7 +318,7 @@ char_type(_C) ->
 -ifdef(TEST).
 
 var_ident_test() ->
-  {ok, Result} = scan("{{ hello.world | bla@wtf: a, 'x' }}"),
+  {ok, Result} = scan("{{ [\"a\", hello.world] | bla@wtf: a, 'x' }}"),
   ?debugVal(Result),
   ok.
 

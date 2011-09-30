@@ -6,14 +6,16 @@
   </head>
   <body>
     {% for x in list %}
-      {% if $for.first %}
+      {% if $loop.first %}
       first
       {% endif %}
-      <span id="{{ $for.index }}">{{ x }}</span>
-      {% if $for.last %}
+      <span id="{{ $loop.index }}">{{ x }}</span>
+      {% if $loop.last %}
       last
       {% endif %}
     {% endfor %}
+
+    {{ ["2011", "09", "30"] | join: "-" }}
 
     <table>
       <tbody>

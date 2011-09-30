@@ -12,7 +12,7 @@ for_loop_test() ->
   ?assertEqual([a,b,c], for_loop_helper(x)).
 
 for_loop_counter_helper(Var) ->
-  for_loop_helper([<<"$for">>, Var]).
+  for_loop_helper([<<"$">>, <<"loop">>, Var]).
 
 for_loop_counter_test() ->
   ?assertEqual([3,3,3], for_loop_counter_helper(<<"length">>)),
@@ -40,7 +40,7 @@ equals_test() ->
   ?assertEqual(false, zview_runtime:equals(1, 2)),
   ?assertEqual(false, zview_runtime:equals("2", 1)),
   ?assertEqual(false, zview_runtime:equals(1, "2")),
-  % TODO: decide how i want to deal with badarg
+  % TODO: decide how i want to deal with badarg (trying to convert list_to_integer)
   % ?assertEqual(false, zview_runtime:equals(1, "b")),
   ?assertEqual(false, zview_runtime:equals("a", "b")),
   ?assertEqual(false, zview_runtime:equals(<<"abc">>, ["x", <<"y">>, "z"])),

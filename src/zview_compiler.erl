@@ -25,7 +25,7 @@
       erl_prettypr:format(Arg, [{paper, 240}])
   end).
 
--record(tpl_mod, {blocks = [], exports = []}).
+-record(tpl_mod, {module, blocks = [], exports = []}).
 
 to_source({from_source, Bin}, TargetModule) ->
   {ok, Scan} = zview_scanner:scan(Bin),
@@ -60,21 +60,28 @@ compile(Bin, TargetModule) ->
   Ast = to_ast(ParseTree, TargetModule),
   to_module(Ast).
 
-tpl_function(FunName, FunBody) ->
+tpl_function(FunType, FunName, FunBody) ->
   ?C:function(
     ?C:atom(FunName),
     [
       ?C:clause([ ?C:variable("VarStack") ], none, [
-          FunBody
-        ])
+        case FunType of
+          block ->
+            % should call to binary on output we generate so its easier to differentiate between lists and strings
+            ?MFA( erlang, iolist_to_binary, [ FunBody ]);
+
+          export ->
+            FunBody
+        end
+      ])
     ]
   ).
 
 to_ast(ParseTree, TargetModule) ->
-  {ok, RenderInternalAst, State} = transform_tree(ParseTree, [], #tpl_mod{}),
+  {ok, RenderInternalAst, State} = transform_tree(ParseTree, [], #tpl_mod{module = TargetModule}),
 
-  Funs = [{render_internal, RenderInternalAst} | State#tpl_mod.blocks ],
-  FunsAst = lists:reverse([ tpl_function(FunName, FunBody) || {FunName, FunBody} <- Funs ]),
+  Funs = [{block, render_internal, RenderInternalAst} | State#tpl_mod.blocks ],
+  FunsAst = lists:reverse([ tpl_function(FunType, FunName, FunBody) || {FunType, FunName, FunBody} <- Funs ]),
 
   ModuleAst = ?C:attribute(?C:atom(module), [?C:atom(TargetModule)]),
   ExportAst = ?C:attribute(?C:atom(export), [
@@ -162,25 +169,25 @@ transform_tree([Node | Rest], Result, State) ->
 
   end.
 
-
-define_block_function(Id, Body, State) ->
+define_block_function(FunType, Id, Body, State) ->
   {ok, FunAst, StateMod} = transform_tree(Body, [], State),
-  define_block_function_with_ast(Id, FunAst, StateMod).
+  define_block_function_with_ast(FunType, Id, FunAst, StateMod).
 
-define_block_function_with_ast(Id, FunAst, #tpl_mod{blocks = Blocks} = State) ->
+define_block_function_with_ast(FunType, Id, FunAst, #tpl_mod{blocks = Blocks} = State) ->
   FunName = make_fun_name(Id),
-  {FunName, State#tpl_mod{blocks = [{FunName, FunAst} | Blocks]}}.
+  {FunName, State#tpl_mod{blocks = [{FunType, FunName, FunAst} | Blocks]}}.
 
 transform_node({string, _, Value}, State) -> {ok, ?C:abstract(list_to_binary(Value)), State};
 
 transform_node({block, {block_tag, Id, Args}, BlockBody}, State) ->
   BlockArgsAst = make_args_ast(Args),
-  {FunName, NewState} = define_block_function(Id, BlockBody, State),
+  {FunName, NewState} = define_block_function(block, Id, BlockBody, State),
 
   Code = ?MFA(
     zview_runtime,
     call_block_tag,
     [
+      ?C:atom(State#tpl_mod.module),
       make_tagged_identifier(Id),
       BlockArgsAst,
       ?C:implicit_fun(?C:arity_qualifier(?C:atom(FunName), ?C:integer(1))),
@@ -194,7 +201,7 @@ transform_node({for, {Id, {in, ForVariables, ForList}}, ForBody}, State) ->
   VarNames = [ make_var_name(X) || X <- ForVariables ],
   {ok, ListAst, StateList} = transform_node(ForList, State),
 
-  {FunName, NewState} = define_block_function(Id, ForBody, StateList),
+  {FunName, NewState} = define_block_function(block, Id, ForBody, StateList),
 
   % zview_runtime:call_block_tag({for, [x], 'some.list'}, fun tpl_for_0/2, VarStack)
   Code = ?MFA(
@@ -224,6 +231,7 @@ transform_node({apply_filter, ToVariable, {filter, FilterName, FilterArgs}}, Sta
     zview_runtime,
     apply_filter,
     [
+      ?C:atom(State#tpl_mod.module),
       make_tagged_identifier(FilterName),
       ApplyTo,
       ?C:list([ ArgAst || {ok, ArgAst, _} <- FiltersAst ]),
@@ -234,12 +242,12 @@ transform_node({apply_filter, ToVariable, {filter, FilterName, FilterArgs}}, Sta
   {ok, Code, State};
 
 transform_node({block, {export_block, Id, [{auto, ExportId}]}, BlockBody}, State) ->
-  {FunName, #tpl_mod{exports = Exports} = NewState} = define_block_function(Id, BlockBody, State),
+  {FunName, #tpl_mod{exports = Exports} = NewState} = define_block_function(block, Id, BlockBody, State),
   {skip, NewState#tpl_mod{exports = [{make_var_name(ExportId), FunName} | Exports]}};
 
 transform_node({export_tag, Id, ExportArgs}, State) ->
   Code = make_args_ast(ExportArgs),
-  {FunName, #tpl_mod{exports = Exports} = NewState} = define_block_function_with_ast(Id, Code, State),
+  {FunName, #tpl_mod{exports = Exports} = NewState} = define_block_function_with_ast(export, Id, Code, State),
   {skip, NewState#tpl_mod{exports = [FunName | Exports]}};
 
 transform_node({attribute, _} = Token, State) ->
@@ -289,6 +297,7 @@ transform_node({tag, Id, Args}, State) ->
     zview_runtime,
     call_tag,
     [
+      ?C:atom(State#tpl_mod.module),
       make_tagged_identifier(Id),
       make_args_ast(Args),
       ?C:variable("VarStack")
@@ -326,6 +335,10 @@ transform_node({string_literal, _, String}, State) ->
 transform_node({number_literal, _, Number}, State) ->
   {ok, ?C:integer(list_to_integer(Number)), State};
 
+transform_node({list, Item}, State) ->
+  Code = ?C:list(make_list_items(Item, [])),
+  {ok, Code, State};
+
 transform_node(Unparsed, _State) ->
   throw({unparsed, Unparsed}).
 
@@ -335,6 +348,13 @@ transform_arg({{identifier, _, _} = Id, Var}) ->
       ?C:atom(make_var_name(Id)),
       ValAst
     ]).
+
+make_list_items(list_end, Result) ->
+  lists:reverse(Result);
+
+make_list_items({list_item, Node, Next}, Result) ->
+  {ok, Code, _} = transform_node(Node, undefined),
+  make_list_items(Next, [Code | Result]).
 
 make_tagged_identifier({Mod, Fun}) ->
   ?C:tuple([
@@ -348,7 +368,6 @@ make_var_name({identifier, _, Atom}) -> Atom.
 make_args_ast(Args) ->
   ArgsAst = [ transform_arg(Arg) || Arg <- Args ],
   ?C:list(ArgsAst).
-
 
 make_resolve_call(Path, State) ->
   Code = ?MFA(
@@ -402,8 +421,10 @@ variable_path({attribute, {{identifier, _, Attr}, Of}}, Path) ->
   variable_path(Of, [AttrBin | Path]);
 
 variable_path({variable, {identifier, _, VarName}}, Path) ->
-  [list_to_binary(atom_to_list(VarName)) | Path].
+  [list_to_binary(atom_to_list(VarName)) | Path];
 
+variable_path({svariable, {identifier, _, VarName}}, Path) ->
+  [<<"$">>, list_to_binary(atom_to_list(VarName)) | Path].
 
 unescape_string_literal(String) ->
   unescape_string_literal(string:strip(String, both, 34), [], noslash).
