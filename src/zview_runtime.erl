@@ -46,6 +46,9 @@ validate_var_stack(_) ->
   invalid_var_stack.
 
 % TODO: implement filters
+apply_filter(_, {default, inspect}, Value, [], VarStack) ->
+  io_lib:format("~p", [Value]);
+
 apply_filter(CallingTemplate, Filter, Value, Args, VarStack) ->
   Call = {CallingTemplate, Filter, Value, Args, VarStack},
   ?debugVal(Call),
