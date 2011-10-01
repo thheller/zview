@@ -149,7 +149,7 @@ Variable -> Variable '.' identifier : {attribute, {'$3', '$1'}}.
 VarOrLiteral -> Literal : '$1'.
 VarOrLiteral -> Variable : '$1'.
 
-ListExpr -> '[' ']' : empty_list.
+ListExpr -> '[' ']' : {list, list_end}.
 ListExpr -> '[' VarOrLiteral ListTail : {list, {list_item, '$2', '$3'}}.
 
 ListTail -> ']' : list_end.

@@ -53,11 +53,15 @@ apply_filter(CallingTemplate, Filter, Value, Args, VarStack) ->
 
 % TODO: implement tag calling
 % TagName = {Mod, Fun}
-call_tag(_CallingTemplate, _TagName, _TagArgs, _VarStack) ->
+call_tag(CallingTemplate, TagName, TagArgs, VarStack) ->
+  Call = {CallingTemplate, TagName, TagArgs, VarStack},
+  ?debugVal(Call),
   [].
 
 % TODO: actually do something instead of just calling the body
-call_block_tag(_CallingTemplate, _TagName, _TagArgs, Block, VarStack) ->
+call_block_tag(CallingTemplate, TagName, TagArgs, Block, VarStack) ->
+  Call = {CallingTemplate, TagName, TagArgs, Block, VarStack},
+  ?debugVal(Call),
   Block(VarStack).
 
 % for loop for an empty list, does nothing obviously
@@ -94,6 +98,7 @@ is_true(undefined) -> false;
 is_true(_) -> true.
 
 to_string([]) -> [];
+to_string(Bin) when is_binary(Bin) -> Bin;
 to_string(Int) when is_integer(Int) -> integer_to_list(Int);
 to_string(Atom) when is_atom(Atom) -> list_to_binary(atom_to_list(Atom));
 to_string(List) when is_list(List) ->
@@ -123,8 +128,8 @@ convert_to_int(List) when is_list(List) -> list_to_integer(List).
 %%% --- INTERNAL METHODS ---
 
 'and'(true, true) -> true;
-'and'(false, true) -> false;
-'and'(true, false) -> false;
+'and'(false, _) -> false;
+'and'(_, false) -> false;
 'and'(Left, Right) ->
   'and'(is_true(Left), is_true(Right)).
 
