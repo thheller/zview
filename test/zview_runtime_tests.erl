@@ -23,6 +23,8 @@ for_loop_counter_test() ->
   ?assertEqual([2,1,0], for_loop_counter_helper(<<"rindex">>)),
   ?assertEqual([3,2,1], for_loop_counter_helper(<<"rindex0">>)).
 
+boolean_op_test() ->
+  ?assertEqual(true, zview_runtime:boolean_op('true', {[{value, "blubb"}]}, true)).
 
 equals_test() ->
   ?assertEqual(true, zview_runtime:equals("a", "a")),
@@ -44,4 +46,24 @@ equals_test() ->
   % ?assertEqual(false, zview_runtime:equals(1, "b")),
   ?assertEqual(false, zview_runtime:equals("a", "b")),
   ?assertEqual(false, zview_runtime:equals(<<"abc">>, ["x", <<"y">>, "z"])),
+  ok.
+
+var_stack_test() ->
+  Options = [
+    {custom_tags, [{test, zview_test_tags}]}
+  ],
+
+  Vars = [ ],
+
+  % what exactly do i want to test here?
+  {var_stack, {root, Context}, Vars, root} = VarStack = zview_runtime:init_var_stack(Options, Vars),
+
+  {ok, zview_test_tags} = zview_runtime:find_tag_alias(test, VarStack),
+  {ok, Context} = zview_runtime:get_context(root, VarStack),
+
+  not_found = zview_runtime:get_context(dummy, VarStack),
+
+  DummyStack = zview_runtime:push_var_stack([], dummy, blubb, VarStack),
+  {ok, blubb} = zview_runtime:get_context(dummy, DummyStack),
+
   ok.

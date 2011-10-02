@@ -53,6 +53,33 @@ super_meaningless_template_parse_and_compile_test() ->
   ?assertEqual(<<"hello exported dummy">>, iolist_to_binary(proplists:get_value(dummy, Exports))),
   ok.
 
+if_args_test() ->
+  Doc1 =
+    "{% if x %}"
+    "inside if true"
+    "{% else %}"
+    "inside else"
+    "{% endif %}",
+
+  {source, _, Source} = zview_compiler:to_source({from_source, Doc1}, compile_test),
+  ?debugMsg(Source),
+
+  ok = zview_compiler:compile(Doc1, compile_test_dtl),
+  Vars = [
+        {y, "test"},
+        {x, "from args"},
+        {true, "yeah"},
+        {some, [
+              {list, [a,b,c]}
+            ]}
+      ],
+
+  VarStack = zview_runtime:new_var_stack(Vars),
+
+  {ok, Result, Exports} = compile_test_dtl:render(VarStack),
+  ?debugMsg(Result),
+  ?assertEqual(0, length(Exports)),
+  ok.
 
 compile_test() ->
   DummyTpl = 

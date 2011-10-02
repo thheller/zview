@@ -4,13 +4,17 @@
 
 % public functions
 -export([
-    new_var_stack/1,
+    init_var_stack/2,
     resolve/2
   ]).
 
 % functions intended to be called by templates mostly
 -export([
+    get_context/2,
+    find_tag_alias/2,
     validate_var_stack/1,
+    push_var_stack/2,
+    push_var_stack/4,
     call_tag/4,
     call_block_tag/5,
     apply_filter/5,
@@ -23,11 +27,8 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
--record(root_context, {block_aliases = [], filter_aliases = []}).
+-record(root_context, {custom_tags = []}).
 -record(for_counter, {length, current}).
-
-new_var_stack(List) when is_list(List) ->
-  {var_stack, #root_context{}, List, root}.
 
 % Key is expected to be a kvc:kvc_key()
 % 'some.path'
@@ -37,6 +38,10 @@ resolve(Key, VarStack) ->
   Value = resolve_it(Key, VarStack),
   Value.
 
+init_var_stack(Context, List) when is_list(List) ->
+  CustomTags = proplists:get_value(custom_tags, Context, []),
+  {var_stack, {root, #root_context{custom_tags = CustomTags}}, List, root}.
+
 validate_var_stack({var_stack, Context, Vars, root} = Input) when is_list(Vars) andalso is_record(Context, root_context) ->
   {ok, Input};
 validate_var_stack({var_stack, _Context, Vars, _Parent} = Input) when is_list(Vars) ->
@@ -45,32 +50,50 @@ validate_var_stack({var_stack, _Context, Vars, _Parent} = Input) when is_list(Va
 validate_var_stack(_) ->
   invalid_var_stack.
 
-% TODO: implement filters
-apply_filter(_, {default, inspect}, Value, [], VarStack) ->
-  io_lib:format("~p", [Value]);
+push_var_stack(Vars, {var_stack, _, _, _} = Parent) ->
+  {var_stack, undefined, Vars, Parent}.
 
-apply_filter(CallingTemplate, Filter, Value, Args, VarStack) ->
-  Call = {CallingTemplate, Filter, Value, Args, VarStack},
-  ?debugVal(Call),
-  Value.
+push_var_stack(Vars, Id, Context, {var_stack, _, _, _} = Parent) ->
+  {var_stack, {Id, Context}, Vars, Parent}.
 
-% TODO: implement tag calling
-% TagName = {Mod, Fun}
-call_tag(CallingTemplate, TagName, TagArgs, VarStack) ->
-  Call = {CallingTemplate, TagName, TagArgs, VarStack},
-  ?debugVal(Call),
-  [].
+apply_filter(_CallingTemplate, {FilterAlias, FilterName}, Value, Args, VarStack) ->
+  {ok, TagModule} = find_tag_alias(FilterAlias, VarStack),
 
-% TODO: actually do something instead of just calling the body
-call_block_tag(CallingTemplate, TagName, TagArgs, Block, VarStack) ->
-  Call = {CallingTemplate, TagName, TagArgs, Block, VarStack},
-  ?debugVal(Call),
-  Block(VarStack).
+  case TagModule:zview_filter(FilterName, Value, Args, VarStack) of
+    {value, NewValue} ->
+      NewValue;
+
+    invalid_filter ->
+      % TODO: error report this
+      io_lib:format("invalid filter call: {~p,~p} in ~p", [FilterAlias, FilterName, TagModule])
+  end.
+
+call_tag(CallingTemplate, {TagAlias, TagName}, TagArgs, VarStack) ->
+  {ok, TagModule} = find_tag_alias(TagAlias, VarStack),
+
+  case TagModule:zview_tag(TagName, TagArgs, VarStack) of
+    {output, Body} ->
+      Body;
+
+    invalid_tag ->
+      % TODO: error report this
+      io_lib:format("invalid tag call: {~p,~p} in ~p", [TagAlias, TagName, TagModule])
+  end.
+
+call_block_tag(CallingTemplate, {TagAlias, TagName}, TagArgs, Block, VarStack) ->
+  {ok, TagModule} = find_tag_alias(TagAlias, VarStack),
+
+  case TagModule:zview_block(TagName, TagArgs, Block, VarStack) of
+    {output, Body} ->
+      Body;
+
+    invalid_block ->
+      % TODO: error report this
+      io_lib:format("invalid block tag call: {~p,~p} in ~p", [TagAlias, TagName, TagModule])
+  end.
 
 % for loop for an empty list, does nothing obviously
-call_for({in, _, []}, _, _) ->
-  [];
-
+call_for({in, _, []}, _, _) -> [];
 call_for({in, VarNames, Var}, Block, VarStack) ->
   ForState = make_for_counter(Var),
   iterate_block(ForState, VarNames, Var, Block, VarStack, []).
@@ -136,6 +159,20 @@ convert_to_int(List) when is_list(List) -> list_to_integer(List).
 'and'(Left, Right) ->
   'and'(is_true(Left), is_true(Right)).
 
+find_tag_alias(default, _VarStack) -> {ok, zview_default_tags};
+find_tag_alias(Alias, VarStack) ->
+  {ok, Root} = get_context(root, VarStack),
+  case proplists:get_value(Alias, Root#root_context.custom_tags, undefined) of
+    undefined ->
+      {tag_alias_not_found, Alias, Root#root_context.custom_tags};
+
+    Found ->
+      {ok, Found}
+  end.
+
+get_context(Id, root) -> not_found;
+get_context(Id, {var_stack, {Id, Context}, _Vars, Parent}) -> {ok, Context};
+get_context(Id, {var_stack, _, _, Parent}) -> get_context(Id, Parent).
 
 make_stack_vars([VarName], Item) -> [{VarName, Item}];
 make_stack_vars([N1, N2], {V1, V2}) -> [{N1, V1}, {N2, V2}];

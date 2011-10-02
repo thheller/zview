@@ -1,8 +1,8 @@
 -module(zview_folder).
 
--export([init/1, render/3]).
+-export([init/1, render/3, init_var_stack/1]).
 
--record(folder, {root, table, ext = ".tpl"}).
+-record(folder, {root, table, ext = ".tpl", options = []}).
 -record(tpl, {name, module, filename, source, last_modified}).
 
 init(Options) ->
@@ -14,12 +14,21 @@ init(Options) ->
       case filelib:is_dir(Root) of
         true ->
           Tab = ets:new(zview_folder, [set, public, {keypos, #tpl.name}]),
-          {ok, #folder{root = Root, table = Tab}};
+          {ok, #folder{
+              root = Root,
+              table = Tab,
+              options = proplists:get_value(options, Options, [])
+            }
+          };
+
         false ->
           {error, {"not a directory", Root}}
 
       end
   end.
+
+init_var_stack(#folder{options = Options}) ->
+  zview_runtime:init_var_stack(Options, []).
 
 render(#folder{table = Table} = Config, Template, Vars) ->
   case ets:lookup(Table, Template) of
@@ -80,8 +89,7 @@ check_modified_and_render_template(Config, #tpl{name = Name, last_modified = Ts,
 purge_template(Config, Template) ->
   ok.
 
-render_template(Config, #tpl{module = Module} = Template, Vars) ->
-  VarStack = zview_runtime:new_var_stack(Vars),
+render_template(Config, #tpl{module = Module} = Template, VarStack) ->
   Result = Module:render(VarStack),
   Result.
 
@@ -91,9 +99,8 @@ render_template(Config, #tpl{module = Module} = Template, Vars) ->
 % this is not exaclty the right way, need to figure this out
 
 setup_zview() ->
-  application:start(zview),
 
-  {file, Path} = code:is_loaded(zview_folder),
+  {file, Path} = code:is_loaded(?MODULE),
   Root = filename:dirname(filename:dirname(Path)),
   TemplateRoot = filename:absname(filename:join([Root, "test", "templates"])),
   {ok, TemplateRoot}.
@@ -103,15 +110,25 @@ templates_test() ->
   {ok, TemplateRoot} = setup_zview(),
 
   {ok, Repo} = init([
-      {root, TemplateRoot}
+      {root, TemplateRoot},
+      {options, [ {custom_tags, [{test, zview_test_tags}]} ]}
     ]),
 
-  {ok, Content, Exports} = render(Repo, "simple", []),
+  InitStack = init_var_stack(Repo),
 
-  ?debugVal(Content),
+  ?debugVal(InitStack),
+
+  Vars = [
+    {title, "Test Title (should not be default)"},
+    {list, ["a", "b", "c"]}
+  ],
+
+  VarStack = zview:push_var_stack(Vars, InitStack), 
+
+  {ok, Content, Exports} = render(Repo, "simple", VarStack),
+
+  ?debugMsg(Content),
   ?debugVal(Exports),
-
-  application:stop(zview),
 
   ok.
 

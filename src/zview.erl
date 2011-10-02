@@ -2,7 +2,12 @@
 
 -include("zview.hrl").
 
--export([start/0, open_repository/2, render/3]).
+-export([
+    start/0,
+    init_var_stack/1,
+    open_repository/2,
+    render/3
+  ]).
 
 -record(repo, {type, config}).
 
@@ -22,6 +27,9 @@ render(Repo, Name, Vars) when is_binary(Name) ->
 render(Repo, Name, Vars) when is_atom(Name) ->
   render(Repo, atom_to_list(Name), Vars);
 
-render(#repo{type = RepoType, config = Config}, Name, Vars) ->
-  RepoType:render(Config, Name, Vars).
+render(#repo{type = RepoType, config = Config}, Name, {var_stack, _, _, _} = VarStack) ->
+  RepoType:render(Config, Name, VarStack).
+
+init_var_stack(#repo{type = RepoType, config = Config}) ->
+  RepoType:init_var_stack(Config).
 
