@@ -57,39 +57,57 @@ push_var_stack(Vars, Id, Context, {var_stack, _, _, _} = Parent) ->
   {var_stack, {Id, Context}, Vars, Parent}.
 
 apply_filter(_CallingTemplate, {FilterAlias, FilterName}, Value, Args, VarStack) ->
-  {ok, TagModule} = find_tag_alias(FilterAlias, VarStack),
+  case find_tag_alias(FilterAlias, VarStack) of
+    {ok, TagModule} ->
+      case TagModule:zview_filter(FilterName, Value, Args, VarStack) of
+        {value, NewValue} ->
+          NewValue;
 
-  case TagModule:zview_filter(FilterName, Value, Args, VarStack) of
-    {value, NewValue} ->
-      NewValue;
+        invalid_filter ->
+          % TODO: error report this
+          io_lib:format("invalid filter call: {~p,~p} in ~p", [FilterAlias, FilterName, TagModule])
+      end;
 
-    invalid_filter ->
-      % TODO: error report this
-      io_lib:format("invalid filter call: {~p,~p} in ~p", [FilterAlias, FilterName, TagModule])
+    not_found ->
+      % TODO: warn somehow, but dont fail
+      Value
+
   end.
+
 
 call_tag(CallingTemplate, {TagAlias, TagName}, TagArgs, VarStack) ->
-  {ok, TagModule} = find_tag_alias(TagAlias, VarStack),
+  case find_tag_alias(TagAlias, VarStack) of
+    {ok, TagModule} ->
+      case TagModule:zview_tag(TagName, TagArgs, VarStack) of
+        {output, Body} ->
+          Body;
 
-  case TagModule:zview_tag(TagName, TagArgs, VarStack) of
-    {output, Body} ->
-      Body;
+        invalid_tag ->
+          % TODO: error report this
+          io_lib:format("invalid tag call: {~p,~p} in ~p", [TagAlias, TagName, TagModule])
+      end;
 
-    invalid_tag ->
+    not_found ->
       % TODO: error report this
-      io_lib:format("invalid tag call: {~p,~p} in ~p", [TagAlias, TagName, TagModule])
+      io_lib:format("invalid tag alias: {~p,~p}", [TagAlias, TagName])
   end.
 
+
 call_block_tag(CallingTemplate, {TagAlias, TagName}, TagArgs, Block, VarStack) ->
-  {ok, TagModule} = find_tag_alias(TagAlias, VarStack),
+  case find_tag_alias(TagAlias, VarStack) of
+    {ok, TagModule} ->
+      case TagModule:zview_block(TagName, TagArgs, Block, VarStack) of
+        {output, Body} ->
+          Body;
 
-  case TagModule:zview_block(TagName, TagArgs, Block, VarStack) of
-    {output, Body} ->
-      Body;
+        invalid_tag ->
+          % TODO: error report this
+          io_lib:format("invalid block tag call: {~p,~p} in ~p", [TagAlias, TagName, TagModule])
+      end;
 
-    invalid_block ->
+    not_found ->
       % TODO: error report this
-      io_lib:format("invalid block tag call: {~p,~p} in ~p", [TagAlias, TagName, TagModule])
+      io_lib:format("invalid tag alias: {~p,~p}", [TagAlias, TagName])
   end.
 
 % for loop for an empty list, does nothing obviously
@@ -164,7 +182,7 @@ find_tag_alias(Alias, VarStack) ->
   {ok, Root} = get_context(root, VarStack),
   case proplists:get_value(Alias, Root#root_context.custom_tags, undefined) of
     undefined ->
-      {tag_alias_not_found, Alias, Root#root_context.custom_tags};
+      not_found;
 
     Found ->
       {ok, Found}

@@ -87,10 +87,10 @@ scan([], Scanned, _, in_text) ->
                     ({identifier, Pos, String}) ->
                         RevString = lists:reverse(String),
                         Keywords = [
-                            "comment", "endcomment", 
-                            "filter", "endfilter",
-                            "for", "in", "empty", "endfor", 
-                            "if", "else", "endif", "not", "or", "and", 
+                            "comment",
+                            "filter",
+                            "for", "in", "empty",
+                            "if", "else", "not", "or", "and", 
                             "export",
                             "do", "end"
                         ], 

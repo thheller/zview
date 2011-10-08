@@ -11,7 +11,7 @@ super_meaningless_template_parse_and_compile_test() ->
     "{{ title | default: 'My Page Title' }}"
     "{% for x in content.by_group.content %}"
       "<div id=\"{{ x.id }}\" class=\"content\">{{ $loop.index.whatever }}: {{ x.content }}</div>"
-    "{% endfor %}"
+    "{% end %}"
     "{% builtin_tag foo=bar do %}"
       "inside builtin_tag"
     "{% end %}"
@@ -21,12 +21,12 @@ super_meaningless_template_parse_and_compile_test() ->
     "{% end %}"
     "{% if x == \"from_args\" %}"
     "inside if true"
-    "{% endif %}"
+    "{% end %}"
     "{% if x >= 1 and y <= \"test\" %}"
     "inside if true"
     "{% else %}"
     "inside else"
-    "{% endif %}",
+    "{% end %}",
 
   % {source, _, Source} = zview_compiler:to_source({from_source, Doc1}, compile_test),
   % ?debugMsg(Source),
@@ -41,7 +41,7 @@ super_meaningless_template_parse_and_compile_test() ->
             ]}
       ],
 
-  VarStack = zview_runtime:new_var_stack(Vars),
+  VarStack = zview_runtime:init_var_stack([], Vars),
 
   {ok, Result, Exports} = compile_test_dtl:render(VarStack),
   ?debugMsg(Result),
@@ -59,7 +59,7 @@ if_args_test() ->
     "inside if true"
     "{% else %}"
     "inside else"
-    "{% endif %}",
+    "{% end %}",
 
   {source, _, Source} = zview_compiler:to_source({from_source, Doc1}, compile_test),
   ?debugMsg(Source),
@@ -74,7 +74,7 @@ if_args_test() ->
             ]}
       ],
 
-  VarStack = zview_runtime:new_var_stack(Vars),
+  VarStack = zview_runtime:init_var_stack([], Vars),
 
   {ok, Result, Exports} = compile_test_dtl:render(VarStack),
   ?debugMsg(Result),

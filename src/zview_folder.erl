@@ -53,19 +53,23 @@ compile_and_render_template(Config, Template, Vars) ->
 
       TargetModule = list_to_atom(lists:flatten(io_lib:format("zview_~p_~p_~p_~p", [Config#folder.table, A, B, C]))),
 
-      ok = zview_compiler:compile(Source, TargetModule),
+      case zview_compiler:compile(Source, TargetModule) of
+        ok ->
+          CompiledTemplate = #tpl{
+            module = TargetModule, 
+            name = Template,
+            source = Source,
+            filename = Filename,
+            last_modified = filelib:last_modified(Filename)
+          },
 
-      CompiledTemplate = #tpl{
-        module = TargetModule, 
-        name = Template,
-        source = Source,
-        filename = Filename,
-        last_modified = filelib:last_modified(Filename)
-      },
+          true = ets:insert(Config#folder.table, CompiledTemplate),
 
-      true = ets:insert(Config#folder.table, CompiledTemplate),
+          render_template(Config, CompiledTemplate, Vars);
 
-      render_template(Config, CompiledTemplate, Vars);
+        {error, Reason} ->
+          {error, Reason}
+      end;
 
     false ->
       {template_not_found, Filename}
@@ -123,7 +127,7 @@ templates_test() ->
     {list, ["a", "b", "c"]}
   ],
 
-  VarStack = zview:push_var_stack(Vars, InitStack), 
+  VarStack = zview_runtime:push_var_stack(Vars, InitStack), 
 
   {ok, Content, Exports} = render(Repo, "simple", VarStack),
 

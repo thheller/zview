@@ -8,12 +8,12 @@
     {% for x in list %}
       {% if $loop.first %}
       first
-      {% endif %}
+      {% end %}
       <span id="{{ $loop.index }}">{{ x }}</span>
       {% if $loop.last %}
       last
-      {% endif %}
-    {% endfor %}
+      {% end %}
+    {% end %}
 
     {{ ["2011", "09", "30"] | inspect }}
 
@@ -24,7 +24,7 @@
           <td>{{ k }}</td>
           <td>{{ v }}</td>
         </tr>
-        {% endfor %}
+        {% end %}
       </tbody>
     </table>
   </body>

@@ -56,9 +56,14 @@ compile(Bin, TargetModule) when is_binary(Bin) ->
 
 compile(Bin, TargetModule) ->
   {ok, Scan} = zview_scanner:scan(Bin),
-  {ok, ParseTree} = zview_parser:parse(Scan),
-  Ast = to_ast(ParseTree, TargetModule),
-  to_module(Ast).
+  case zview_parser:parse(Scan) of
+    {ok, ParseTree} ->
+      Ast = to_ast(ParseTree, TargetModule),
+      to_module(Ast);
+
+    {error, Reason} ->
+      {error, Reason}
+  end.
 
 tpl_function(FunType, FunName, FunBody) ->
   ?C:function(
