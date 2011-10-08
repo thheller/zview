@@ -8,11 +8,10 @@
     {% for x in list %}
       {% if $loop.first %}
       first
-      {% end %}
-      <span id="{{ $loop.index }}">{{ x }}</span>
-      {% if $loop.last %}
+      {% elsif $loop.last %}
       last
       {% end %}
+      <span id="{{ $loop.index }}">{{ x }}</span>
     {% end %}
 
     {{ ["2011", "09", "30"] | inspect }}

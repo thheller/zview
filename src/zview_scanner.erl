@@ -90,7 +90,7 @@ scan([], Scanned, _, in_text) ->
                             "comment",
                             "filter",
                             "for", "in", "empty",
-                            "if", "else", "not", "or", "and", 
+                            "if", "else", "elsif", "not", "or", "and", 
                             "export",
                             "do", "end"
                         ], 

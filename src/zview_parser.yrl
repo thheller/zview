@@ -33,7 +33,10 @@ Nonterminals
     IfBlock
     IfTag
     IfExpression
+
+    ElseBlock
     ElseTag
+    ElsIfTag
 
     ListExpr
     ListTail
@@ -53,13 +56,14 @@ Terminals
     close_tag
     close_var
     comment_keyword
-    else_keyword
     empty_keyword
     export_keyword
     filter_keyword
     for_keyword
     identifier
     if_keyword
+    else_keyword
+    elsif_keyword
     in_keyword
     not_keyword
     number_literal
@@ -145,11 +149,19 @@ ForExpression -> ForGroup in_keyword Variable : {'in', '$1', '$3'}.
 ForGroup -> identifier : ['$1'].
 ForGroup -> ForGroup ',' identifier : '$1' ++ ['$3'].
 
-IfBlock -> IfTag Elements ElseTag Elements EndTag : {ifelse, '$1', '$2', '$4'}.
-IfBlock -> IfTag Elements EndTag : {'if', '$1', '$2'}.
-ElseTag -> open_tag else_keyword close_tag.
+IfBlock -> IfTag Elements ElseBlock: {ifelse, '$1', '$2', '$3'}.
+
+ElseBlock -> EndTag : [].
+ElseBlock -> ElseTag Elements EndTag : '$2'.
+ElseBlock -> ElsIfTag Elements ElseBlock : [{ifelse, '$1', '$2', '$3'}].
 
 IfTag -> open_tag if_keyword IfExpression close_tag : '$3'.
+ElseTag -> open_tag else_keyword close_tag.
+
+ElsIfTag -> open_tag elsif_keyword IfExpression close_tag : '$3'.
+ElsIfTag -> open_tag else_keyword if_keyword IfExpression close_tag : '$4'.
+
+
 IfExpression -> Value in_keyword Value : {'expr', 'in', '$1', '$3'}.
 IfExpression -> Value not_keyword in_keyword Value : {'expr', 'not', {'expr', 'in', '$1', '$4'}}.
 IfExpression -> Value '==' Value : {'expr', 'eq', '$1', '$3'}.

@@ -21,15 +21,18 @@ super_meaningless_template_parse_and_compile_test() ->
     "{% end %}"
     "{% if x == \"from_args\" %}"
     "inside if true"
+    "{% else %}"
+    "inside else"
     "{% end %}"
     "{% if x >= 1 and y <= \"test\" %}"
     "inside if true"
-    "{% else %}"
-    "inside else"
+    "{% elsif x == y %}"
+    "inside elsif"
+    "{% else if y == 'y' %}"
     "{% end %}",
 
-  % {source, _, Source} = zview_compiler:to_source({from_source, Doc1}, compile_test),
-  % ?debugMsg(Source),
+  {source, _, Source} = zview_compiler:to_source({from_source, Doc1}, compile_test),
+  ?debugMsg(Source),
 
   ok = zview_compiler:compile(Doc1, compile_test_dtl),
   Vars = [
@@ -61,8 +64,8 @@ if_args_test() ->
     "inside else"
     "{% end %}",
 
-  {source, _, Source} = zview_compiler:to_source({from_source, Doc1}, compile_test),
-  ?debugMsg(Source),
+  % {source, _, Source} = zview_compiler:to_source({from_source, Doc1}, compile_test),
+  % ?debugMsg(Source),
 
   ok = zview_compiler:compile(Doc1, compile_test_dtl),
   Vars = [

@@ -31,11 +31,11 @@ example1_test() ->
 
 
 example2_test() ->
-  Doc = "{% if x %} {% some_tag arg=$x %} {% end %}",
+  Doc = "{% if x %}true x{% elsif y %}true y{% else %}false{% end %}",
 
   {ok, Scan} = zview_scanner:scan(Doc),
   {ok, ParseTree} = zview_parser:parse(Scan),
-  % ?debugVal(ParseTree),
+  ?debugVal(ParseTree),
   ok.
 
 example3_test() ->

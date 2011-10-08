@@ -261,9 +261,6 @@ transform_node({attribute, _} = Token, State) ->
 transform_node({variable, _} = Token, State) ->
   make_resolve_call(variable_path(Token, []), State);
 
-transform_node({'if', Expr, True}, State) ->
-  transform_node({ifelse, Expr, True, []}, State);
-
 transform_node({ifelse, Expr, True, False}, State) ->
   {ok, TrueAst, State2} = transform_tree(True, [], State),
   {ok, FalseAst, State3} = transform_tree(False, [], State2),
