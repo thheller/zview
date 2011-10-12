@@ -4,7 +4,6 @@
 
 % public functions
 -export([
-    init_var_stack/2,
     resolve/2
   ]).
 
@@ -29,7 +28,6 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
--record(root_context, {custom_tags = []}).
 -record(for_counter, {length, current}).
 
 % Key is expected to be a kvc:kvc_key()
@@ -39,10 +37,6 @@
 resolve(Key, VarStack) ->
   Value = resolve_it(Key, VarStack),
   Value.
-
-init_var_stack(Context, List) when is_list(List) ->
-  CustomTags = proplists:get_value(custom_tags, Context, []),
-  {var_stack, {root, #root_context{custom_tags = CustomTags}}, List, root}.
 
 push_template_context(CallingTemplate, Input) ->
   case validate_var_stack(Input) of
@@ -57,9 +51,7 @@ get_template_context(VarStack) ->
   {ok, Context} = get_context(template, VarStack),
   Context:repo().
 
-validate_var_stack({var_stack, Context, Vars, root} = Input) when is_list(Vars) andalso is_record(Context, root_context) ->
-  {ok, Input};
-validate_var_stack({var_stack, _Context, Vars, _Parent} = Input) when is_list(Vars) ->
+validate_var_stack({var_stack, _Context, _Vars, _Parent} = Input) ->
   {ok, Input};
 
 validate_var_stack(_) ->
@@ -71,8 +63,8 @@ push_var_stack(Vars, {var_stack, _, _, _} = Parent) ->
 push_var_stack(Vars, Id, Context, {var_stack, _, _, _} = Parent) ->
   {var_stack, {Id, Context}, Vars, Parent}.
 
-apply_filter(_CallingTemplate, {FilterAlias, FilterName}, Value, Args, VarStack) ->
-  case find_tag_alias(FilterAlias, VarStack) of
+apply_filter(CallingTemplate, {FilterAlias, FilterName}, Value, Args, VarStack) ->
+  case find_tag_alias(CallingTemplate, FilterAlias) of
     {ok, TagModule} ->
       case TagModule:zview_filter(FilterName, Value, Args, VarStack) of
         {value, NewValue} ->
@@ -91,7 +83,7 @@ apply_filter(_CallingTemplate, {FilterAlias, FilterName}, Value, Args, VarStack)
 
 
 call_tag(CallingTemplate, {TagAlias, TagName}, TagArgs, VarStack) ->
-  case find_tag_alias(TagAlias, VarStack) of
+  case find_tag_alias(CallingTemplate, TagAlias) of
     {ok, TagModule} ->
       case TagModule:zview_tag(TagName, TagArgs, VarStack) of
         {output, Body} ->
@@ -109,7 +101,7 @@ call_tag(CallingTemplate, {TagAlias, TagName}, TagArgs, VarStack) ->
 
 
 call_block_tag(CallingTemplate, {TagAlias, TagName}, TagArgs, Block, VarStack) ->
-  case find_tag_alias(TagAlias, VarStack) of
+  case find_tag_alias(CallingTemplate, TagAlias) of
     {ok, TagModule} ->
       case TagModule:zview_block(TagName, TagArgs, Block, VarStack) of
         {output, Body} ->
@@ -192,16 +184,10 @@ convert_to_int(List) when is_list(List) -> list_to_integer(List).
 'and'(Left, Right) ->
   'and'(is_true(Left), is_true(Right)).
 
-find_tag_alias(default, _VarStack) -> {ok, zview_default_tags};
-find_tag_alias(Alias, VarStack) ->
-  {ok, Root} = get_context(root, VarStack),
-  case proplists:get_value(Alias, Root#root_context.custom_tags, undefined) of
-    undefined ->
-      not_found;
-
-    Found ->
-      {ok, Found}
-  end.
+find_tag_alias(_CallingTemplate, default) -> {ok, zview_default_tags};
+find_tag_alias(CallingTemplate, Alias) ->
+  {Repo, Config} = CallingTemplate:repo(),
+  Repo:get_custom_tag(Config, Alias).
 
 get_context(Id, root) -> not_found;
 get_context(Id, {var_stack, {Id, Context}, _Vars, Parent}) -> {ok, Context};

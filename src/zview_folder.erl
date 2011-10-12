@@ -1,6 +1,6 @@
 -module(zview_folder).
 
--export([init/3, render/3]).
+-export([init/3, render/3, get_custom_tag/2]).
 
 -record(folder, {id, root, table, ext = ".tpl", options = []}).
 -record(tpl, {name, module, filename, source, last_modified}).
@@ -19,6 +19,17 @@ init(Id, Root, Options) ->
 
     false ->
       {error, {"not a directory", Root}}
+  end.
+
+get_custom_tag(Config, Alias) ->
+  CustomTags = proplists:get_value(custom_tags, Config#folder.options, []),
+
+  case proplists:get_value(Alias, CustomTags, undefined) of
+    undefined ->
+      not_found;
+
+    Found ->
+      {ok, Found}
   end.
 
 render(#folder{table = Table} = Config, Template, Vars) ->
