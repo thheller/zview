@@ -30,9 +30,11 @@ start_link() ->
 init(_) ->
   ets:new(?ZVIEW_CFG, [named_table, protected, set, {keypos, #zview_repo.id}]),
 
+  {ok, Options} = application:get_env(zview, options),
+
   case application:get_env(zview, repos) of
     {ok, Repos} when is_list(Repos) ->
-      ok = setup_repos(Repos),
+      ok = setup_repos(Repos, Options),
       {ok, none};
 
     {ok, Repos} ->
@@ -58,11 +60,11 @@ code_change(_OldVsn, State, _Extra) ->
   {ok, State}.
 
 
-setup_repos([]) ->
+setup_repos([], _) ->
   ok;
 
 % should each repo have its own sup?
-setup_repos([{Id, {folder, Root}} | More]) ->
-  {ok, Repo} = zview_folder:init(Id, Root, []),
+setup_repos([{Id, {folder, Root}} | More], Options) ->
+  {ok, Repo} = zview_folder:init(Id, Root, Options),
   true = ets:insert(?ZVIEW_CFG, #zview_repo{id = Id, state = Repo}),
-  setup_repos(More).
+  setup_repos(More, Options).
