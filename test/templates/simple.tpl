@@ -16,6 +16,8 @@
 
     {{ ["2011", "09", "30"] | inspect }}
 
+    {% render template="includes_tags" list=list %}
+
     <table>
       <tbody>
         {% for k, v in $context.vars %}

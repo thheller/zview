@@ -1,6 +1,6 @@
 -module(zview_compiler).
 
--export([to_source/2, compile/2]).
+-export([to_source/3, compile/3]).
 
 -include_lib("eunit/include/eunit.hrl").
 
@@ -27,13 +27,13 @@
 
 -record(tpl_mod, {module, blocks = [], exports = []}).
 
-to_source({from_source, Bin}, TargetModule) ->
+to_source({from_source, Bin}, TargetModule, TemplateRepo) ->
   {ok, Scan} = zview_scanner:scan(Bin),
   {ok, Parse} = zview_parser:parse(Scan),
-  to_source(Parse, TargetModule);
+  to_source(Parse, TargetModule, TemplateRepo);
 
-to_source(ParseTree, TargetModule) ->
-  {ast, _, Sources} = to_ast(ParseTree, TargetModule),
+to_source(ParseTree, TargetModule, TemplateRepo) ->
+  {ast, _, Sources} = to_ast(ParseTree, TargetModule, TemplateRepo),
 
   Body = string:join([ ?PP(Source) || Source <- Sources ], "\n\n"),
   {source, TargetModule, Body}.
@@ -51,14 +51,15 @@ to_module({ast, TargetModule, _Sources} = Ast) ->
   {module, _} = code:load_binary(TargetModule, atom_to_list(TargetModule) ++ ".erl", ModuleBinary),
   ok.
 
-compile(Bin, TargetModule) when is_binary(Bin) ->
-  compile(binary_to_list(Bin), TargetModule);
+compile(Bin, TargetModule, TemplateRepo) when is_binary(Bin) ->
+  compile(binary_to_list(Bin), TargetModule, TemplateRepo);
 
-compile(Bin, TargetModule) ->
+compile(Bin, TargetModule, TemplateRepo) ->
   {ok, Scan} = zview_scanner:scan(Bin),
+
   case zview_parser:parse(Scan) of
     {ok, ParseTree} ->
-      Ast = to_ast(ParseTree, TargetModule),
+      Ast = to_ast(ParseTree, TargetModule, TemplateRepo),
       to_module(Ast);
 
     {error, Reason} ->
@@ -82,7 +83,7 @@ tpl_function(FunType, FunName, FunBody) ->
     ]
   ).
 
-to_ast(ParseTree, TargetModule) ->
+to_ast(ParseTree, TargetModule, TemplateRepo) ->
   {ok, RenderInternalAst, State} = transform_tree(ParseTree, [], #tpl_mod{module = TargetModule}),
 
   Funs = [{block, render_internal, RenderInternalAst} | State#tpl_mod.blocks ],
@@ -91,10 +92,10 @@ to_ast(ParseTree, TargetModule) ->
   ModuleAst = ?C:attribute(?C:atom(module), [?C:atom(TargetModule)]),
   ExportAst = ?C:attribute(?C:atom(export), [
       ?C:list([
+          ?C:arity_qualifier(?C:atom(repo), ?C:integer(0)),
           ?C:arity_qualifier(?C:atom(render), ?C:integer(1))
         ])
     ]),
-
 
   ExportFuns = State#tpl_mod.exports,
 
@@ -111,6 +112,15 @@ to_ast(ParseTree, TargetModule) ->
     ExportFuns
   ),
 
+  RepoFunAst = ?C:function(
+    ?C:atom(repo),
+    [
+      ?C:clause([], none, [
+          ?C:abstract(TemplateRepo)
+        ])
+    ]
+  ),
+
   RenderFunAst = ?C:function(
     ?C:atom(render),
     [
@@ -122,8 +132,9 @@ to_ast(ParseTree, TargetModule) ->
               ]),
             ?MFA(
               zview_runtime,
-              validate_var_stack,
+              push_template_context,
               [
+                ?C:atom(TargetModule),
                 ?C:variable("Input")
               ]
             )
@@ -155,7 +166,8 @@ to_ast(ParseTree, TargetModule) ->
     ModuleAst,
     ExportAst,
     FunsAst,
-    RenderFunAst
+    RenderFunAst,
+    RepoFunAst
   ]),
 
   {ast, TargetModule, Sources}.

@@ -13,8 +13,10 @@
     get_context/2,
     find_tag_alias/2,
     validate_var_stack/1,
+    push_template_context/2,
     push_var_stack/2,
     push_var_stack/4,
+    get_template_context/1,
     call_tag/4,
     call_block_tag/5,
     apply_filter/5,
@@ -41,6 +43,19 @@ resolve(Key, VarStack) ->
 init_var_stack(Context, List) when is_list(List) ->
   CustomTags = proplists:get_value(custom_tags, Context, []),
   {var_stack, {root, #root_context{custom_tags = CustomTags}}, List, root}.
+
+push_template_context(CallingTemplate, Input) ->
+  case validate_var_stack(Input) of
+    {ok, VarStack} ->
+      {ok, push_var_stack([], template, CallingTemplate, VarStack)};
+
+    invalid_var_stack ->
+      invalid_var_stack
+  end.
+
+get_template_context(VarStack) ->
+  {ok, Context} = get_context(template, VarStack),
+  Context:repo().
 
 validate_var_stack({var_stack, Context, Vars, root} = Input) when is_list(Vars) andalso is_record(Context, root_context) ->
   {ok, Input};

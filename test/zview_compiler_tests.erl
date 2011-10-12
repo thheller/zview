@@ -31,10 +31,10 @@ super_meaningless_template_parse_and_compile_test() ->
     "{% else if y == 'y' %}"
     "{% end %}",
 
-  {source, _, Source} = zview_compiler:to_source({from_source, Doc1}, compile_test),
+  {source, _, Source} = zview_compiler:to_source({from_source, Doc1}, compile_test, no_context),
   ?debugMsg(Source),
 
-  ok = zview_compiler:compile(Doc1, compile_test_dtl),
+  ok = zview_compiler:compile(Doc1, compile_test_dtl, no_context),
   Vars = [
         {y, "test"},
         {x, "from args"},
@@ -43,6 +43,8 @@ super_meaningless_template_parse_and_compile_test() ->
               {list, [a,b,c]}
             ]}
       ],
+
+  ?assertEqual(no_context, compile_test_dtl:repo()),
 
   VarStack = zview_runtime:init_var_stack([], Vars),
 
@@ -67,7 +69,7 @@ if_args_test() ->
   % {source, _, Source} = zview_compiler:to_source({from_source, Doc1}, compile_test),
   % ?debugMsg(Source),
 
-  ok = zview_compiler:compile(Doc1, compile_test_dtl),
+  ok = zview_compiler:compile(Doc1, compile_test_dtl, no_context),
   Vars = [
         {y, "test"},
         {x, "from args"},
@@ -77,7 +79,7 @@ if_args_test() ->
             ]}
       ],
 
-  VarStack = zview_runtime:init_var_stack([], Vars),
+  VarStack = zview:init_var_stack(Vars),
 
   {ok, Result, Exports} = compile_test_dtl:render(VarStack),
   ?debugMsg(Result),
