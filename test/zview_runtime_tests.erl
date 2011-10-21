@@ -56,10 +56,7 @@ var_stack_test() ->
   Vars = [ ],
 
   % what exactly do i want to test here?
-  {var_stack, {root, Context}, Vars, root} = VarStack = zview_runtime:init_var_stack(Options, Vars),
-
-  {ok, zview_test_tags} = zview_runtime:find_tag_alias(test, VarStack),
-  {ok, Context} = zview_runtime:get_context(root, VarStack),
+  VarStack = zview:init_var_stack(Vars),
 
   not_found = zview_runtime:get_context(dummy, VarStack),
 

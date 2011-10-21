@@ -8,14 +8,15 @@
     {% for x in list %}
       {% if $loop.first %}
       first
-      {% endif %}
-      <span id="{{ $loop.index }}">{{ x }}</span>
-      {% if $loop.last %}
+      {% elsif $loop.last %}
       last
-      {% endif %}
-    {% endfor %}
+      {% end %}
+      <span id="{{ $loop.index }}">{{ x }}</span>
+    {% end %}
 
     {{ ["2011", "09", "30"] | inspect }}
+
+    {% render template="includes_tags" list=list %}
 
     <table>
       <tbody>
@@ -24,7 +25,7 @@
           <td>{{ k }}</td>
           <td>{{ v }}</td>
         </tr>
-        {% endfor %}
+        {% end %}
       </tbody>
     </table>
   </body>

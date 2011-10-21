@@ -1,34 +1,36 @@
 -module(zview_folder).
 
--export([init/1, render/3, init_var_stack/1]).
+-export([init/3, render/3, get_custom_tag/2]).
 
--record(folder, {root, table, ext = ".tpl", options = []}).
+-record(folder, {id, root, table, ext = ".tpl", options = []}).
 -record(tpl, {name, module, filename, source, last_modified}).
 
-init(Options) ->
-  case proplists:get_value(root, Options) of
-    undefined ->
-      {error, "no template root given"};
+init(Id, Root, Options) ->
+  case filelib:is_dir(Root) of
+    true ->
+      Tab = ets:new(zview_folder, [set, public, {keypos, #tpl.name}]),
+      {ok, #folder{
+          id = Id,
+          root = Root,
+          table = Tab,
+          options = Options
+        }
+      };
 
-    Root ->
-      case filelib:is_dir(Root) of
-        true ->
-          Tab = ets:new(zview_folder, [set, public, {keypos, #tpl.name}]),
-          {ok, #folder{
-              root = Root,
-              table = Tab,
-              options = proplists:get_value(options, Options, [])
-            }
-          };
-
-        false ->
-          {error, {"not a directory", Root}}
-
-      end
+    false ->
+      {error, {"not a directory", Root}}
   end.
 
-init_var_stack(#folder{options = Options}) ->
-  zview_runtime:init_var_stack(Options, []).
+get_custom_tag(Config, Alias) ->
+  CustomTags = proplists:get_value(custom_tags, Config#folder.options, []),
+
+  case proplists:get_value(Alias, CustomTags, undefined) of
+    undefined ->
+      not_found;
+
+    Found ->
+      {ok, Found}
+  end.
 
 render(#folder{table = Table} = Config, Template, Vars) ->
   case ets:lookup(Table, Template) of
@@ -53,19 +55,23 @@ compile_and_render_template(Config, Template, Vars) ->
 
       TargetModule = list_to_atom(lists:flatten(io_lib:format("zview_~p_~p_~p_~p", [Config#folder.table, A, B, C]))),
 
-      ok = zview_compiler:compile(Source, TargetModule),
+      case zview_compiler:compile(Source, TargetModule, {zview_folder, Config}) of
+        ok ->
+          CompiledTemplate = #tpl{
+            module = TargetModule, 
+            name = Template,
+            source = Source,
+            filename = Filename,
+            last_modified = filelib:last_modified(Filename)
+          },
 
-      CompiledTemplate = #tpl{
-        module = TargetModule, 
-        name = Template,
-        source = Source,
-        filename = Filename,
-        last_modified = filelib:last_modified(Filename)
-      },
+          true = ets:insert(Config#folder.table, CompiledTemplate),
 
-      true = ets:insert(Config#folder.table, CompiledTemplate),
+          render_template(Config, CompiledTemplate, Vars);
 
-      render_template(Config, CompiledTemplate, Vars);
+        {error, Reason} ->
+          {error, Reason}
+      end;
 
     false ->
       {template_not_found, Filename}
@@ -99,9 +105,10 @@ render_template(Config, #tpl{module = Module} = Template, VarStack) ->
 % this is not exaclty the right way, need to figure this out
 
 setup_zview() ->
+  {ok, EunitRoot} = file:get_cwd(),
 
-  {file, Path} = code:is_loaded(?MODULE),
-  Root = filename:dirname(filename:dirname(Path)),
+  Root = filename:dirname(EunitRoot),
+
   TemplateRoot = filename:absname(filename:join([Root, "test", "templates"])),
   {ok, TemplateRoot}.
 
@@ -109,21 +116,14 @@ setup_zview() ->
 templates_test() ->
   {ok, TemplateRoot} = setup_zview(),
 
-  {ok, Repo} = init([
-      {root, TemplateRoot},
-      {options, [ {custom_tags, [{test, zview_test_tags}]} ]}
-    ]),
-
-  InitStack = init_var_stack(Repo),
-
-  ?debugVal(InitStack),
+  {ok, Repo} = init(test, TemplateRoot, [ {custom_tags, [{test, zview_test_tags}]} ]),
 
   Vars = [
     {title, "Test Title (should not be default)"},
     {list, ["a", "b", "c"]}
   ],
 
-  VarStack = zview:push_var_stack(Vars, InitStack), 
+  VarStack = zview:init_var_stack(Vars), 
 
   {ok, Content, Exports} = render(Repo, "simple", VarStack),
 

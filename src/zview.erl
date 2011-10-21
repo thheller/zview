@@ -4,8 +4,8 @@
 
 -export([
     start/0,
+    stop/0,
     init_var_stack/1,
-    open_repository/2,
     render/3
   ]).
 
@@ -14,22 +14,33 @@
 start() ->
   application:start(zview).
 
-open_repository(folder, Options) ->
-  {ok, Repo} = zview_folder:init(Options),
-  {ok, #repo{type = zview_folder, config = Repo}};
+stop() ->
+  application:stop(zview).
 
-open_repository(Type, Options) ->
-  unknown_type.
+render(RepoId, Name, {List}) when is_list(List) ->
+  render(RepoId, Name, init_var_stack(List));
 
-render(Repo, Name, Vars) when is_binary(Name) ->
-  render(Repo, binary_to_list(Name), Vars);
+render(RepoId, Name, List) when is_list(List) ->
+  render(RepoId, Name, init_var_stack(List));
 
-render(Repo, Name, Vars) when is_atom(Name) ->
-  render(Repo, atom_to_list(Name), Vars);
+render(RepoId, Name, {var_stack, _, _, _} = VarStack) ->
+  case ets:lookup(?ZVIEW_CFG, RepoId) of
+    [{zview_repo, _, Config}] ->
+      zview_folder:render(Config, safe_template_name(Name), VarStack);
 
-render(#repo{type = RepoType, config = Config}, Name, {var_stack, _, _, _} = VarStack) ->
-  RepoType:render(Config, Name, VarStack).
+    [] ->
+      repo_not_found
+  end.
 
-init_var_stack(#repo{type = RepoType, config = Config}) ->
-  RepoType:init_var_stack(Config).
+init_var_stack(Vars) ->
+  {var_stack, root, Vars, root}.
 
+safe_template_name(Bin) when is_binary(Bin) ->
+  safe_template_name(binary_to_list(Bin));
+
+safe_template_name(Atom) when is_atom(Atom) ->
+  safe_template_name(atom_to_list(Atom));
+
+% strip out all leading path stuff, so we cant get out of the repo by accident
+safe_template_name(Name) ->
+  re:replace(Name, "^[~/.]+", "", [{return, list}]).

@@ -11,7 +11,7 @@ super_meaningless_template_parse_and_compile_test() ->
     "{{ title | default: 'My Page Title' }}"
     "{% for x in content.by_group.content %}"
       "<div id=\"{{ x.id }}\" class=\"content\">{{ $loop.index.whatever }}: {{ x.content }}</div>"
-    "{% endfor %}"
+    "{% end %}"
     "{% builtin_tag foo=bar do %}"
       "inside builtin_tag"
     "{% end %}"
@@ -21,17 +21,20 @@ super_meaningless_template_parse_and_compile_test() ->
     "{% end %}"
     "{% if x == \"from_args\" %}"
     "inside if true"
-    "{% endif %}"
-    "{% if x >= 1 and y <= \"test\" %}"
-    "inside if true"
     "{% else %}"
     "inside else"
-    "{% endif %}",
+    "{% end %}"
+    "{% if x >= 1 and y <= \"test\" %}"
+    "inside if true"
+    "{% elsif x == y %}"
+    "inside elsif"
+    "{% else if y == 'y' %}"
+    "{% end %}",
 
-  % {source, _, Source} = zview_compiler:to_source({from_source, Doc1}, compile_test),
-  % ?debugMsg(Source),
+  {source, _, Source} = zview_compiler:to_source({from_source, Doc1}, compile_test, no_context),
+  ?debugMsg(Source),
 
-  ok = zview_compiler:compile(Doc1, compile_test_dtl),
+  ok = zview_compiler:compile(Doc1, compile_test_dtl, no_context),
   Vars = [
         {y, "test"},
         {x, "from args"},
@@ -41,7 +44,9 @@ super_meaningless_template_parse_and_compile_test() ->
             ]}
       ],
 
-  VarStack = zview_runtime:new_var_stack(Vars),
+  ?assertEqual(no_context, compile_test_dtl:repo()),
+
+  VarStack = zview_runtime:init_var_stack([], Vars),
 
   {ok, Result, Exports} = compile_test_dtl:render(VarStack),
   ?debugMsg(Result),
@@ -59,12 +64,12 @@ if_args_test() ->
     "inside if true"
     "{% else %}"
     "inside else"
-    "{% endif %}",
+    "{% end %}",
 
-  {source, _, Source} = zview_compiler:to_source({from_source, Doc1}, compile_test),
-  ?debugMsg(Source),
+  % {source, _, Source} = zview_compiler:to_source({from_source, Doc1}, compile_test),
+  % ?debugMsg(Source),
 
-  ok = zview_compiler:compile(Doc1, compile_test_dtl),
+  ok = zview_compiler:compile(Doc1, compile_test_dtl, no_context),
   Vars = [
         {y, "test"},
         {x, "from args"},
@@ -74,7 +79,7 @@ if_args_test() ->
             ]}
       ],
 
-  VarStack = zview_runtime:new_var_stack(Vars),
+  VarStack = zview:init_var_stack(Vars),
 
   {ok, Result, Exports} = compile_test_dtl:render(VarStack),
   ?debugMsg(Result),

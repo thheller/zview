@@ -1,6 +1,1 @@
-{% export test=test %}
-
-{% for x in list %}
-  {{ x }}
-{% endfor %}
-
+hello from includes: {{ list | inspect }}
