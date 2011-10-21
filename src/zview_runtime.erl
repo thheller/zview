@@ -106,15 +106,21 @@ boolean_op('eq', Left, Right) ->
       false
   end;
 
+boolean_op('ne', Left, Right) ->
+  boolean_op('eq', Left, Right) =:= false;
+
 boolean_op('and', Left, Right) ->
   'and'(Left, Right);
 
+boolean_op(gt, Left, Right) -> Left > Right;
+boolean_op(ge, Left, Right) -> Left >= Right;
+boolean_op(lt, Left, Right) -> Left < Right;
+boolean_op(le, Left, Right) -> Left =< Right;
+
+
 % TODO: implement all boolean ops, 
 boolean_op(Op, Left, Right) ->
-  ?debugVal(Op),
-  ?debugVal(Left),
-  ?debugVal(Right),
-  true.
+  throw({missing_op, Op, Left, Right}).
 
 is_true(true) -> true;
 is_true(false) -> false;
