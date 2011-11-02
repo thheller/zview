@@ -120,8 +120,8 @@ call_block_tag(CallingTemplate, {TagAlias, TagName}, TagArgs, Block, VarStack) -
 % for loop for an empty list, does nothing obviously
 call_for({in, _, []}, _, _) -> [];
 call_for({in, VarNames, Var}, Block, VarStack) ->
-  ForState = make_for_counter(Var),
-  iterate_block(ForState, VarNames, Var, Block, VarStack, []).
+  {ForState, ForList} = make_for_counter(Var),
+  iterate_block(ForState, VarNames, ForList, Block, VarStack, []).
 
 boolean_op('eq', Left, Right) ->
   try
@@ -203,8 +203,10 @@ make_stack_vars([VarName], Item) -> [{VarName, Item}];
 make_stack_vars([N1, N2], {V1, V2}) -> [{N1, V1}, {N2, V2}];
 make_stack_vars(_VarNames, _Item) -> throw(cannot_assign_multiple_yet).
 
+make_for_counter({Val}) when is_list(Val) ->
+  make_for_counter(Val);
 make_for_counter(Val) when is_list(Val) ->
-  #for_counter{length = length(Val), current = 0}.
+  {#for_counter{length = length(Val), current = 0}, Val}.
 
 iterate_block(_ForState, _VarNames, [], _Block, _VarStack, Results) ->
   lists:reverse(Results);
