@@ -47,8 +47,8 @@ init(_) ->
       {error, no_repos}
   end.
 
-handle_call({register_repo, Id, Module, State}, _From, State) ->
-  ok = store_repo(Id, Module, State),
+handle_call({register_repo, Id, Module, RepoState}, _From, State) ->
+  ok = store_repo(Id, Module, RepoState),
   {reply, ok, State};
 
 handle_call(_Request, _From, State) ->
