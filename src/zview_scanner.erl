@@ -60,10 +60,14 @@
 %% @end
 %%--------------------------------------------------------------------
 scan(Template) ->
-  {ok, Scan} = scan(Template, [], {1, 1}, in_text),
-  Cleaned = cleanup(Scan, []),
-  {ok, Cleaned}.
+  case scan(Template, [], {1, 1}, in_text) of
+    {ok, Scan} ->
+      Cleaned = cleanup(Scan, []),
+      {ok, Cleaned};
 
+    {error, Reason} ->
+      {error, Reason}
+  end.
 
 cleanup([], Result) ->
   lists:reverse(Result);
