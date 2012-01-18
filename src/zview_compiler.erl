@@ -55,12 +55,17 @@ compile(Bin, TargetModule, RepoModule, RepoState) when is_binary(Bin) ->
   compile(binary_to_list(Bin), TargetModule, RepoModule, RepoState);
 
 compile(Bin, TargetModule, RepoModule, RepoState) ->
-  {ok, Scan} = zview_scanner:scan(Bin),
+  
+  case zview_scanner:scan(Bin) of
+    {ok, Scan} ->
+      case zview_parser:parse(Scan) of
+        {ok, ParseTree} ->
+          Ast = to_ast(ParseTree, TargetModule, RepoModule, RepoState),
+          to_module(Ast);
 
-  case zview_parser:parse(Scan) of
-    {ok, ParseTree} ->
-      Ast = to_ast(ParseTree, TargetModule, RepoModule, RepoState),
-      to_module(Ast);
+        {error, Reason} ->
+          {error, Reason}
+      end;
 
     {error, Reason} ->
       {error, Reason}
