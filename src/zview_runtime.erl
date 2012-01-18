@@ -192,8 +192,9 @@ convert_to_int(List) when is_list(List) -> list_to_integer(List).
 
 find_tag_alias(_CallingTemplate, default) -> {ok, zview_default_tags};
 find_tag_alias(CallingTemplate, Alias) ->
-  {Repo, Config} = CallingTemplate:repo(),
-  Repo:get_custom_tag(Config, Alias).
+  ?debugVal({CallingTemplate, Alias}),
+  {RepoModule, Config} = CallingTemplate:repo(),
+  RepoModule:get_custom_tag(Config, Alias).
 
 get_context(Id, root) -> not_found;
 get_context(Id, {var_stack, {Id, Context}, _Vars, Parent}) -> {ok, Context};

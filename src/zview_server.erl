@@ -6,7 +6,7 @@
 %% API Function Exports
 %% ------------------------------------------------------------------
 
--export([start_link/0]).
+-export([start_link/0, register_repo/3]).
 
 %% ------------------------------------------------------------------
 %% gen_server Function Exports
@@ -19,7 +19,10 @@
 %% ------------------------------------------------------------------
 %% API Function Definitions
 %% ------------------------------------------------------------------
--record(zview_repo, { id, state }).
+-record(zview_repo, { id, module, state }).
+
+register_repo(Id, Module, State) when is_atom(Id) and is_atom(Module) ->
+  gen_server:call(?SERVER, {register_repo, Id, Module, State}).
 
 start_link() ->
   gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
@@ -44,6 +47,10 @@ init(_) ->
       {error, no_repos}
   end.
 
+handle_call({register_repo, Id, Module, State}, _From, State) ->
+  ok = store_repo(Id, Module, State),
+  {reply, ok, State};
+
 handle_call(_Request, _From, State) ->
   {reply, ignored, State}.
 
@@ -60,11 +67,15 @@ code_change(_OldVsn, State, _Extra) ->
   {ok, State}.
 
 
+store_repo(Id, Module, Repo) ->
+  true = ets:insert(?ZVIEW_CFG, #zview_repo{id = Id, module = Module, state = Repo}),
+  ok.
+
 setup_repos([], _) ->
   ok;
 
 % should each repo have its own sup?
 setup_repos([{Id, {folder, Root}} | More], Options) ->
   {ok, Repo} = zview_folder:init(Id, Root, Options),
-  true = ets:insert(?ZVIEW_CFG, #zview_repo{id = Id, state = Repo}),
+  ok = store_repo(Id, zview_folder, Repo),
   setup_repos(More, Options).

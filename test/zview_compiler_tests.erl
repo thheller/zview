@@ -2,6 +2,11 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+-export([get_custom_tag/2]).
+
+get_custom_tag(State, Alias) ->
+  not_found.
+
 super_meaningless_template_parse_and_compile_test() ->
   Doc1 =
     "{% export wtf='hi' test=1 demo=x %}"
@@ -31,10 +36,10 @@ super_meaningless_template_parse_and_compile_test() ->
     "{% else if y == 'y' %}"
     "{% end %}",
 
-  {source, _, Source} = zview_compiler:to_source({from_source, Doc1}, compile_test, no_context),
+  {source, _, Source} = zview_compiler:to_source({from_source, Doc1}, compile_test, ?MODULE, no_context),
   ?debugMsg(Source),
 
-  ok = zview_compiler:compile(Doc1, compile_test_dtl, no_context),
+  ok = zview_compiler:compile(Doc1, compile_test_dtl, ?MODULE, no_context),
   Vars = [
         {y, "test"},
         {x, "from args"},
@@ -44,9 +49,9 @@ super_meaningless_template_parse_and_compile_test() ->
             ]}
       ],
 
-  ?assertEqual(no_context, compile_test_dtl:repo()),
+  ?assertEqual({?MODULE, no_context}, compile_test_dtl:repo()),
 
-  VarStack = zview_runtime:init_var_stack([], Vars),
+  VarStack = zview:init_var_stack(Vars),
 
   {ok, Result, Exports} = compile_test_dtl:render(VarStack),
   ?debugMsg(Result),
@@ -69,7 +74,7 @@ if_args_test() ->
   % {source, _, Source} = zview_compiler:to_source({from_source, Doc1}, compile_test),
   % ?debugMsg(Source),
 
-  ok = zview_compiler:compile(Doc1, compile_test_dtl, no_context),
+  ok = zview_compiler:compile(Doc1, compile_test_dtl, ?MODULE, no_context),
   Vars = [
         {y, "test"},
         {x, "from args"},

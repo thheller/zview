@@ -1,6 +1,6 @@
 -module(zview_compiler).
 
--export([to_source/3, compile/3]).
+-export([to_source/4, compile/4]).
 
 -include_lib("eunit/include/eunit.hrl").
 
@@ -27,13 +27,13 @@
 
 -record(tpl_mod, {module, blocks = [], exports = []}).
 
-to_source({from_source, Bin}, TargetModule, TemplateRepo) ->
+to_source({from_source, Bin}, TargetModule, RepoModule, RepoState) ->
   {ok, Scan} = zview_scanner:scan(Bin),
   {ok, Parse} = zview_parser:parse(Scan),
-  to_source(Parse, TargetModule, TemplateRepo);
+  to_source(Parse, TargetModule, RepoModule, RepoState);
 
-to_source(ParseTree, TargetModule, TemplateRepo) ->
-  {ast, _, Sources} = to_ast(ParseTree, TargetModule, TemplateRepo),
+to_source(ParseTree, TargetModule, RepoModule, RepoState) ->
+  {ast, _, Sources} = to_ast(ParseTree, TargetModule, RepoModule, RepoState),
 
   Body = string:join([ ?PP(Source) || Source <- Sources ], "\n\n"),
   {source, TargetModule, Body}.
@@ -51,15 +51,15 @@ to_module({ast, TargetModule, _Sources} = Ast) ->
   {module, _} = code:load_binary(TargetModule, atom_to_list(TargetModule) ++ ".erl", ModuleBinary),
   ok.
 
-compile(Bin, TargetModule, TemplateRepo) when is_binary(Bin) ->
-  compile(binary_to_list(Bin), TargetModule, TemplateRepo);
+compile(Bin, TargetModule, RepoModule, RepoState) when is_binary(Bin) ->
+  compile(binary_to_list(Bin), TargetModule, RepoModule, RepoState);
 
-compile(Bin, TargetModule, TemplateRepo) ->
+compile(Bin, TargetModule, RepoModule, RepoState) ->
   {ok, Scan} = zview_scanner:scan(Bin),
 
   case zview_parser:parse(Scan) of
     {ok, ParseTree} ->
-      Ast = to_ast(ParseTree, TargetModule, TemplateRepo),
+      Ast = to_ast(ParseTree, TargetModule, RepoModule, RepoState),
       to_module(Ast);
 
     {error, Reason} ->
@@ -83,7 +83,7 @@ tpl_function(FunType, FunName, FunBody) ->
     ]
   ).
 
-to_ast(ParseTree, TargetModule, TemplateRepo) ->
+to_ast(ParseTree, TargetModule, RepoModule, RepoState) ->
   {ok, RenderInternalAst, State} = transform_tree(ParseTree, [], #tpl_mod{module = TargetModule}),
 
   Funs = [{block, render_internal, RenderInternalAst} | State#tpl_mod.blocks ],
@@ -116,7 +116,7 @@ to_ast(ParseTree, TargetModule, TemplateRepo) ->
     ?C:atom(repo),
     [
       ?C:clause([], none, [
-          ?C:abstract(TemplateRepo)
+          ?C:abstract({RepoModule, RepoState})
         ])
     ]
   ),

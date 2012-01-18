@@ -24,7 +24,7 @@ for_loop_counter_test() ->
   ?assertEqual([3,2,1], for_loop_counter_helper(<<"rindex0">>)).
 
 boolean_op_test() ->
-  ?assertEqual(true, zview_runtime:boolean_op('true', {[{value, "blubb"}]}, true)).
+  ?assertEqual(true, zview_runtime:boolean_op('and', {[{value, "blubb"}]}, true)).
 
 equals_test() ->
   ?assertEqual(true, zview_runtime:equals("a", "a")),

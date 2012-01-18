@@ -55,7 +55,7 @@ compile_and_render_template(Config, Template, Vars) ->
 
       TargetModule = list_to_atom(lists:flatten(io_lib:format("zview_~p_~p_~p_~p", [Config#folder.table, A, B, C]))),
 
-      case zview_compiler:compile(Source, TargetModule, {zview_folder, Config}) of
+      case zview_compiler:compile(Source, TargetModule, zview_folder, Config) of
         ok ->
           CompiledTemplate = #tpl{
             module = TargetModule, 

@@ -25,8 +25,8 @@ render(RepoId, Name, List) when is_list(List) ->
 
 render(RepoId, Name, {var_stack, _, _, _} = VarStack) ->
   case ets:lookup(?ZVIEW_CFG, RepoId) of
-    [{zview_repo, _, Config}] ->
-      zview_folder:render(Config, safe_template_name(Name), VarStack);
+    [{zview_repo, _, Module, Config}] ->
+      Module:render(Config, safe_template_name(Name), VarStack);
 
     [] ->
       repo_not_found
