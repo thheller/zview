@@ -28,9 +28,13 @@ zview_tag(render, Args, VarStack) ->
 
       {Repo, Config} = zview_runtime:get_template_context(VarStack),
 
-      {ok, Content, _} = Repo:render(Config, binary_to_list(TemplateName), RenderStack),
-      {output, Content}
+      case Repo:render(Config, binary_to_list(TemplateName), RenderStack) of
+        {ok, Content, _} ->
+          {output, Content};
 
+        not_found ->
+          {output, ["template:", TemplateName, " was not found"]}
+      end
   end;
 
 
